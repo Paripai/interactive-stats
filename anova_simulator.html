@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ANOVA Simulator - Analysis of Variance</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;600;700;800&family=IBM+Plex+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: "Noto Sans Thai","IBM Plex Sans",sans-serif; font-size: 18px; font-weight: 600; background: #f5f5f5; color: #1a1a1a; min-height: 100vh; }
+
+.header { background: #fff; border-bottom: 3px solid #1a1a1a; padding: 16px 32px; display: flex; align-items: center; justify-content: space-between; }
+.header-left { display: flex; align-items: baseline; gap: 14px; }
+.header h1 { font-size: 28px; font-weight: 800; }
+.header span { font-size: 20px; font-weight: 600; color: #555; }
+
+.home-btn { text-decoration: none; color: #6c757d; font-size: 15px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border: 1px solid #dee2e6; border-radius: 6px; background: #fff; transition: all 0.2s; flex-shrink: 0; }
+.home-btn:hover { background: #f8f9fa; color: #0d6efd; }
+
+.lang-toggle { display: flex; border: 2px solid #1a1a1a; border-radius: 8px; overflow: hidden; }
+.lang-btn { font-family: inherit; font-size: 16px; font-weight: 700; padding: 6px 16px; border: none; cursor: pointer; background: #fff; color: #888; transition: all .12s; }
+.lang-btn.active { background: #1a1a1a; color: #fff; }
+
+.main { max-width: 1000px; margin: 24px auto; padding: 0 24px; }
+.card { background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 20px; margin-bottom: 16px; }
+.card-title { font-size: 20px; font-weight: 800; margin-bottom: 14px; border-bottom: 1px solid #eee; padding-bottom: 8px; }
+
+/* Layout */
+.layout { display: grid; grid-template-columns: 320px 1fr; gap: 20px; }
+@media (max-width: 850px) { .layout { grid-template-columns: 1fr; } }
+
+/* Controls */
+.slider-group { margin-bottom: 20px; }
+.slider-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px; }
+.slider-name { font-size: 16px; font-weight: 700; }
+.slider-val { font-size: 22px; font-weight: 800; min-width: 48px; text-align: right; color: #0d6efd; }
+input[type=range] { width: 100%; accent-color: #0d6efd; cursor: pointer; }
+.slider-ticks { display: flex; justify-content: space-between; font-size: 13px; font-weight: 600; color: #999; margin-top: 2px; }
+
+/* Formula Box */
+.formula-box { background: #1a1a1a; color: #fff; border-radius: 6px; padding: 12px; text-align: center; font-size: 18px; font-family: "IBM Plex Sans", sans-serif; letter-spacing: 1px; margin-bottom: 16px; }
+.formula-box span { color: #4dabf7; font-weight: 800; }
+.formula-box .f-val { color: #ff6b6b; font-size: 24px; }
+
+/* Canvas */
+canvas { width: 100%; display: block; border-radius: 4px; background: #fff; border: 1px solid #eee; }
+
+/* Stats & Legends */
+.stat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 16px; }
+.stat { background: #f8f9fa; border: 1px solid #e0e0e0; border-radius: 6px; padding: 12px; text-align: center; }
+.stat-val { font-size: 22px; font-weight: 800; font-family: "IBM Plex Sans", sans-serif; }
+.stat-lbl { font-size: 14px; font-weight: 600; color: #555; margin-top: 2px; }
+
+.legend { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 12px; justify-content: center; }
+.legend-item { display: flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 600; color: #555; }
+.legend-color { width: 14px; height: 14px; border-radius: 50%; }
+
+.insight { font-size: 16px; font-weight: 600; color: #333; background: #f8f9fa; border-left: 4px solid #0d6efd; padding: 12px 16px; border-radius: 0 6px 6px 0; margin-top: 16px; line-height: 1.5; }
+.insight.sig { border-left-color: #20c997; background: #e6fcf5; }
+.insight.nonsig { border-left-color: #fa5252; background: #fff5f5; }
+
+.questions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.q-chip { font-size: 15px; font-weight: 600; padding: 6px 14px; border: 1px solid #bbb; border-radius: 20px; color: #444; background: #fafafa; line-height: 1.4; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-left">
+    <a href="index.html" class="home-btn" data-th="← หน้าแรก" data-en="← Home">← Home</a>
+    <h1>ANOVA Simulator</h1>
+  </div>
+  <div class="lang-toggle">
+    <button class="lang-btn active" onclick="setLang('th')">TH</button>
+    <button class="lang-btn" onclick="setLang('en')">EN</button>
+  </div>
+</div>
+
+<div class="main">
+  <div class="layout">
+    
+    <div>
+      <div class="card">
+        <div class="card-title" data-th="ปรับค่าความแปรปรวน" data-en="Adjust Variances">ปรับค่าความแปรปรวน</div>
+
+        <div class="formula-box">
+          F = <span style="color:#20c997">MS<sub>Between</sub></span> / <span style="color:#ff922b">MS<sub>Within</sub></span><br>
+          <div style="margin-top: 8px;">F = <span class="f-val" id="fStatUI">0.00</span></div>
+        </div>
+
+        <div class="slider-group">
+          <div class="slider-header">
+            <span class="slider-name" data-th="ห่างกันระหว่างกลุ่ม (Between)" data-en="Between-Group Spread">ห่างกันระหว่างกลุ่ม (Between)</span>
+          </div>
+          <input type="range" id="betweenSlider" min="0" max="30" value="15" step="1" oninput="scheduleUpdate()">
+          <div class="slider-ticks"><span>Min</span><span>Max</span></div>
+        </div>
+
+        <div class="slider-group">
+          <div class="slider-header">
+            <span class="slider-name" data-th="กระจายภายในกลุ่ม (Within)" data-en="Within-Group Spread">กระจายภายในกลุ่ม (Within)</span>
+          </div>
+          <input type="range" id="withinSlider" min="1" max="25" value="5" step="0.5" oninput="scheduleUpdate()">
+          <div class="slider-ticks"><span>Tight</span><span>Wide</span></div>
+        </div>
+
+        <hr style="border: 0; border-top: 1px solid #eee; margin: 16px 0;">
+        <button class="btn" style="width:100%; font-size:16px;" onclick="generateData()" data-th="สุ่มจุดข้อมูลใหม่" data-en="Re-roll Data Points">สุ่มจุดข้อมูลใหม่</button>
+      </div>
+
+      <div class="card">
+        <div class="card-title" data-th="คำถามชวนคิด" data-en="Discussion Questions">คำถามชวนคิด</div>
+        <div class="questions">
+          <div class="q-chip" data-th="ถ้าลด Between ลงจนสุด ค่า F จะเข้าใกล้เลขอะไร?" data-en="If Between is 0, what does F approach?">ถ้าลด Between ลงจนสุด ค่า F จะเข้าใกล้เลขอะไร?</div>
+          <div class="q-chip" data-th="ทำไมกลุ่มห่างกันเท่าเดิม แต่พอเพิ่ม Within ค่า F ถึงตก?" data-en="Why does F drop if we increase Within spread, even if group means stay the same?">ทำไมกลุ่มห่างกันเท่าเดิม แต่พอเพิ่ม Within ค่า F ถึงตก?</div>
+          <div class="q-chip" data-th="F-ratio คือสัดส่วนของอะไร?" data-en="What is the F-ratio a proportion of?">F-ratio คือสัดส่วนของอะไร?</div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="card">
+        <div class="card-title" data-th="กราฟกระจายข้อมูล (Scatter Plot)" data-en="Data Distribution (Scatter Plot)">กราฟกระจายข้อมูล (Scatter Plot)</div>
+        
+        <canvas id="cvs" height="340"></canvas>
+        
+        <div class="legend">
+          <div class="legend-item"><div class="legend-color" style="background:#ff6b6b;"></div>Group A</div>
+          <div class="legend-item"><div class="legend-color" style="background:#4dabf7;"></div>Group B</div>
+          <div class="legend-item"><div class="legend-color" style="background:#51cf66;"></div>Group C</div>
+          <div class="legend-item" style="margin-left: 10px; border-left: 1px solid #ccc; padding-left: 10px;">
+            <div style="width:20px; border-top:2px dashed #1a1a1a;"></div><span data-th="Grand Mean" data-en="Grand Mean">Grand Mean</span>
+          </div>
+        </div>
+
+        <div class="stat-grid">
+          <div class="stat" style="border-bottom: 3px solid #20c997;"><div class="stat-val" id="sMSB">0.0</div><div class="stat-lbl">MS<sub>Between</sub></div></div>
+          <div class="stat" style="border-bottom: 3px solid #ff922b;"><div class="stat-val" id="sMSW">0.0</div><div class="stat-lbl">MS<sub>Within</sub></div></div>
+          <div class="stat" style="background:#343a40; color:#fff;"><div class="stat-val" id="sPval">0.000</div><div class="stat-lbl" style="color:#aaa;">P-Value</div></div>
+        </div>
+
+        <div class="insight" id="insight"></div>
+      </div>
+    </div>
+    
+  </div>
+</div>
+
+<script>
+// --- Language System ---
+var currentLang = 'th';
+function t(th, en) { return currentLang === 'en' ? en : th; }
+function setLang(lang) {
+  currentLang = lang;
+  document.querySelectorAll('.lang-btn').forEach(b => b.classList.toggle('active', b.textContent.trim().toLowerCase() === lang));
+  document.querySelectorAll('[data-th]').forEach(el => {
+    var val = el.getAttribute('data-' + lang);
+    if (val) el.innerHTML = val;
+  });
+  updateUI();
+  draw();
+}
+
+// --- Data Generation ---
+const N_PER_GROUP = 30;
+const GROUPS = ['A', 'B', 'C'];
+const COLORS = { A: '#ff6b6b', B: '#4dabf7', C: '#51cf66' };
+let baseData = { A: [], B: [], C: [] };
+
+// Generate Standard Normal Z-scores for each point
+function randNorm() {
+  let u = 0, v = 0;
+  while(u === 0) u = Math.random();
+  while(v === 0) v = Math.random();
+  return Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v);
+}
+
+function generateData() {
+  GROUPS.forEach(g => {
+    baseData[g] = [];
+    for(let i = 0; i < N_PER_GROUP; i++) {
+      // { z: normal value, jitter: vertical random offset }
+      baseData[g].push({ z: randNorm(), jitter: (Math.random() - 0.5) * 0.6 });
+    }
+  });
+  scheduleUpdate();
+}
+
+// --- Animation State ---
+let animBetween = 15, targetBetween = 15;
+let animWithin = 5, targetWithin = 5;
+let rafId = null;
+
+function scheduleUpdate() {
+  targetBetween = parseFloat(document.getElementById('betweenSlider').value);
+  targetWithin = parseFloat(document.getElementById('withinSlider').value);
+  
+  if (!rafId) rafId = requestAnimationFrame(animate);
+}
+
+function animate() {
+  const SPEED = 0.15;
+  const db = targetBetween - animBetween;
+  const dw = targetWithin - animWithin;
+  
+  if (Math.abs(db) < 0.1 && Math.abs(dw) < 0.1) {
+    animBetween = targetBetween;
+    animWithin = targetWithin;
+    rafId = null;
+    draw();
+    return;
+  }
+  
+  animBetween += db * SPEED;
+  animWithin += dw * SPEED;
+  draw();
+  rafId = requestAnimationFrame(animate);
+}
+
+// --- Stats Calculation ---
+// F(2, 87) Critical value at alpha=0.05 is ~ 3.10
+function calculateANOVA(betweenSpread, withinSpread) {
+  const GRAND_CENTER = 100;
+  
+  // Centers based on Between Spread
+  const centers = {
+    A: GRAND_CENTER - betweenSpread,
+    B: GRAND_CENTER,
+    C: GRAND_CENTER + betweenSpread
+  };
+  
+  // Build actual data array
+  let allData = [];
+  let groupMeans = { A: 0, B: 0, C: 0 };
+  
+  GROUPS.forEach(g => {
+    let sum = 0;
+    baseData[g].forEach(pt => {
+      let val = centers[g] + (pt.z * withinSpread);
+      allData.push({ group: g, val: val, jitter: pt.jitter });
+      sum += val;
+    });
+    groupMeans[g] = sum / N_PER_GROUP;
+  });
+  
+  let grandMean = allData.reduce((acc, curr) => acc + curr.val, 0) / (N_PER_GROUP * 3);
+  
+  // Calculate SS
+  let ssBetween = 0;
+  GROUPS.forEach(g => {
+    ssBetween += N_PER_GROUP * Math.pow(groupMeans[g] - grandMean, 2);
+  });
+  
+  let ssWithin = 0;
+  allData.forEach(d => {
+    ssWithin += Math.pow(d.val - groupMeans[d.group], 2);
+  });
+  
+  let dfBetween = GROUPS.length - 1; // 2
+  let dfWithin = (N_PER_GROUP * 3) - GROUPS.length; // 87
+  
+  let msBetween = ssBetween / dfBetween;
+  let msWithin = ssWithin / dfWithin;
+  let fStat = msBetween / (msWithin || 0.0001); // Prevent div by 0
+  
+  // Pseudo p-value generator based on F(2, 87)
+  let pValue = 1.0;
+  if(fStat > 7.46) pValue = "< 0.001";
+  else if(fStat > 4.86) pValue = "< 0.01";
+  else if(fStat > 3.10) pValue = "< 0.05";
+  else pValue = "> 0.05";
+  
+  return { allData, groupMeans, grandMean, msBetween, msWithin, fStat, pValue };
+}
+
+// --- Canvas Drawing ---
+const canvas = document.getElementById('cvs');
+const ctx = canvas.getContext('2d');
+
+function resizeCanvas() {
+  const W = canvas.parentElement.clientWidth - 40;
+  canvas.style.width = W + 'px';
+  canvas.width = W * window.devicePixelRatio;
+  canvas.height = 340 * window.devicePixelRatio;
+  ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+  scheduleUpdate();
+}
+window.addEventListener('resize', resizeCanvas);
+
+function draw() {
+  const stats = calculateANOVA(animBetween, animWithin);
+  updateUI(stats);
+  
+  const W = canvas.offsetWidth, H = canvas.offsetHeight;
+  ctx.clearRect(0, 0, W, H);
+  
+  const pad = { top: 30, bottom: 40, left: 20, right: 20 };
+  const cw = W - pad.left - pad.right;
+  const ch = H - pad.top - pad.bottom;
+  
+  // X Scale (Fixed 0 to 200 to show shifting)
+  const XMIN = 20, XMAX = 180;
+  const toX = (v) => pad.left + ((v - XMIN) / (XMAX - XMIN)) * cw;
+  
+  // Y Scale (Groups)
+  const yBands = { A: pad.top + ch*0.15, B: pad.top + ch*0.5, C: pad.top + ch*0.85 };
+  
+  // Draw Grand Mean Line (Black Dashed)
+  const gmx = toX(stats.grandMean);
+  ctx.beginPath(); ctx.setLineDash([6, 4]); ctx.lineWidth = 2; ctx.strokeStyle = '#1a1a1a';
+  ctx.moveTo(gmx, pad.top - 10); ctx.lineTo(gmx, H - pad.bottom + 10);
+  ctx.stroke(); ctx.setLineDash([]);
+  
+  // Draw Group Means and Points
+  GROUPS.forEach(g => {
+    const gy = yBands[g];
+    const gmxGroup = toX(stats.groupMeans[g]);
+    
+    // Draw horizontal connection to Grand Mean (visualizes Between-Group Variance)
+    ctx.beginPath();
+    ctx.moveTo(gmx, gy - 25);
+    ctx.lineTo(gmxGroup, gy - 25);
+    ctx.strokeStyle = '#20c997'; // MS_Between color
+    ctx.lineWidth = 3;
+    ctx.stroke();
+    
+    // Group Mean Marker
+    ctx.beginPath();
+    ctx.moveTo(gmxGroup, gy - 30);
+    ctx.lineTo(gmxGroup, gy + 30);
+    ctx.strokeStyle = COLORS[g];
+    ctx.lineWidth = 4;
+    ctx.stroke();
+    
+    // Points
+    const groupData = stats.allData.filter(d => d.group === g);
+    groupData.forEach(pt => {
+      const px = toX(pt.val);
+      const py = gy + pt.jitter * 40; // 40px vertical spread
+      
+      ctx.beginPath();
+      ctx.arc(px, py, 4, 0, Math.PI * 2);
+      ctx.fillStyle = COLORS[g] + '99'; // Semi-transparent
+      ctx.fill();
+      ctx.strokeStyle = COLORS[g];
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    });
+  });
+  
+  // X-Axis
+  ctx.strokeStyle = '#888'; ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(pad.left, H - pad.bottom + 10); ctx.lineTo(W - pad.right, H - pad.bottom + 10);
+  ctx.stroke();
+}
+
+function updateUI(stats) {
+  if(!stats) return;
+  
+  // Update Numeric Stats
+  document.getElementById('fStatUI').textContent = stats.fStat.toFixed(2);
+  document.getElementById('sMSB').textContent = Math.round(stats.msBetween).toLocaleString();
+  document.getElementById('sMSW').textContent = Math.round(stats.msWithin).toLocaleString();
+  document.getElementById('sPval').textContent = stats.pValue;
+  
+  // Update Insight
+  const ins = document.getElementById('insight');
+  const isSig = stats.fStat > 3.10;
+  
+  ins.className = 'insight ' + (isSig ? 'sig' : 'nonsig');
+  
+  if (isSig) {
+    ins.innerHTML = t(
+      `<b>มีนัยสำคัญ (Significant):</b> ค่า F สูง (${stats.fStat.toFixed(1)}) เพราะกลุ่มข้อมูลแยกออกจากกันชัดเจน (MS<sub>B</sub> มากกว่า MS<sub>W</sub>)`,
+      `<b>Significant:</b> High F-ratio (${stats.fStat.toFixed(1)}) because the groups are clearly separated (MS<sub>B</sub> is greater than MS<sub>W</sub>).`
+    );
+  } else {
+    ins.innerHTML = t(
+      `<b>ไม่มีนัยสำคัญ (Not Sig.):</b> ค่า F ต่ำ (${stats.fStat.toFixed(1)}) กลุ่มข้อมูลทับซ้อนกันมากเกินไปจนไม่สามารถสรุปได้ว่าค่าเฉลี่ยต่างกันจริง`,
+      `<b>Not Significant:</b> Low F-ratio (${stats.fStat.toFixed(1)}). The data groups overlap too much to conclude that their true means are different.`
+    );
+  }
+}
+
+// Init
+generateData();
+setTimeout(resizeCanvas, 50);
+setLang('th');
+</script>
+</body>
+</html>

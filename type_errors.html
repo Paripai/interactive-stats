@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Type I & II Errors Simulator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;600;700;800&family=IBM+Plex+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: "Noto Sans Thai","IBM Plex Sans",sans-serif; font-size: 18px; font-weight: 600; background: #f5f5f5; color: #1a1a1a; min-height: 100vh; }
+
+.header { background: #fff; border-bottom: 3px solid #1a1a1a; padding: 16px 32px; display: flex; align-items: center; justify-content: space-between; }
+.header-left { display: flex; align-items: baseline; gap: 14px; }
+.header h1 { font-size: 28px; font-weight: 800; }
+
+.home-btn { text-decoration: none; color: #6c757d; font-size: 15px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border: 1px solid #dee2e6; border-radius: 6px; background: #fff; transition: all 0.2s; flex-shrink: 0; }
+.home-btn:hover { background: #f8f9fa; color: #0d6efd; }
+
+.lang-toggle { display: flex; border: 2px solid #1a1a1a; border-radius: 8px; overflow: hidden; }
+.lang-btn { font-family: inherit; font-size: 16px; font-weight: 700; padding: 6px 16px; border: none; cursor: pointer; background: #fff; color: #888; transition: all .12s; }
+.lang-btn.active { background: #1a1a1a; color: #fff; }
+
+.main { max-width: 1000px; margin: 24px auto; padding: 0 24px; }
+.card { background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 20px; margin-bottom: 16px; }
+.card-title { font-size: 20px; font-weight: 800; margin-bottom: 14px; border-bottom: 1px solid #eee; padding-bottom: 8px; }
+
+/* Layout */
+.layout { display: grid; grid-template-columns: 340px 1fr; gap: 20px; }
+@media (max-width: 850px) { .layout { grid-template-columns: 1fr; } }
+
+/* Controls */
+.slider-group { margin-bottom: 18px; }
+.slider-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px; }
+.slider-name { font-size: 16px; font-weight: 700; }
+.slider-val { font-size: 22px; font-weight: 800; min-width: 48px; text-align: right; color: #1a1a1a; }
+input[type=range] { width: 100%; cursor: pointer; }
+input[type=range]#cvSlider { accent-color: #1a1a1a; }
+input[type=range]#mu1Slider { accent-color: #0d6efd; }
+input[type=range]#sdSlider { accent-color: #6c757d; }
+.slider-ticks { display: flex; justify-content: space-between; font-size: 13px; font-weight: 600; color: #999; margin-top: 2px; }
+
+/* Canvas */
+canvas { width: 100%; display: block; border-radius: 4px; background: #fff; }
+
+/* Stats & Legends */
+.stat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 16px; }
+.stat { background: #f8f9fa; border: 1px solid #e0e0e0; border-radius: 6px; padding: 12px; text-align: center; }
+.stat-val { font-size: 24px; font-weight: 800; }
+.stat-lbl { font-size: 14px; font-weight: 600; color: #555; margin-top: 2px; }
+
+.legend { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 12px; justify-content: center; }
+.legend-item { display: flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 600; color: #555; }
+.legend-color { width: 16px; height: 12px; border-radius: 3px; }
+
+.insight { font-size: 16px; font-weight: 600; color: #333; background: #f8f9fa; border-left: 4px solid #1a1a1a; padding: 12px 16px; border-radius: 0 6px 6px 0; margin-top: 16px; line-height: 1.5; }
+
+.questions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.q-chip { font-size: 15px; font-weight: 600; padding: 6px 14px; border: 1px solid #bbb; border-radius: 20px; color: #444; background: #fafafa; line-height: 1.4; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-left">
+    <a href="index.html" class="home-btn" data-th="← หน้าแรก" data-en="← Home">← Home</a>
+    <h1>Type I & II Errors</h1>
+  </div>
+  <div class="lang-toggle">
+    <button class="lang-btn active" onclick="setLang('th')">TH</button>
+    <button class="lang-btn" onclick="setLang('en')">EN</button>
+  </div>
+</div>
+
+<div class="main">
+  <div class="layout">
+    
+    <div>
+      <div class="card">
+        <div class="card-title" data-th="ตั้งค่าพารามิเตอร์" data-en="Adjust Parameters">ตั้งค่าพารามิเตอร์</div>
+
+        <div class="slider-group">
+          <div class="slider-header">
+            <span class="slider-name" data-th="ค่าวิกฤต (Critical Value)" data-en="Critical Value (Decision Line)">ค่าวิกฤต (Critical Value)</span>
+            <span class="slider-val" id="cvVal">116</span>
+          </div>
+          <input type="range" id="cvSlider" min="95" max="145" value="116" step="0.5" oninput="scheduleUpdate()">
+          <div class="slider-ticks"><span data-th="ซ้าย" data-en="Left">ซ้าย</span><span data-th="ขวา" data-en="Right">ขวา</span></div>
+        </div>
+
+        <div class="slider-group">
+          <div class="slider-header">
+            <span class="slider-name" data-th="ค่าเฉลี่ย H<sub>1</sub> (Effect Size)" data-en="H<sub>1</sub> Mean (Effect Size)">ค่าเฉลี่ย H<sub>1</sub> (Effect Size)</span>
+            <span class="slider-val" style="color: #0d6efd;" id="mu1Val">125</span>
+          </div>
+          <input type="range" id="mu1Slider" min="100" max="150" value="125" step="1" oninput="scheduleUpdate()">
+          <div class="slider-ticks"><span data-th="ใกล้ H<sub>0</sub>" data-en="Near H<sub>0</sub>">ใกล้ H<sub>0</sub></span><span data-th="ไกลออกไป" data-en="Far away">ไกลออกไป</span></div>
+        </div>
+
+        <div class="slider-group">
+          <div class="slider-header">
+            <span class="slider-name" data-th="ส่วนเบี่ยงเบน (SD / Spread)" data-en="Standard Dev (Spread)">ส่วนเบี่ยงเบน (SD / Spread)</span>
+            <span class="slider-val" style="color: #6c757d;" id="sdVal">10</span>
+          </div>
+          <input type="range" id="sdSlider" min="5" max="25" value="10" step="0.5" oninput="scheduleUpdate()">
+          <div class="slider-ticks"><span data-th="แคบ" data-en="Narrow">แคบ</span><span data-th="กว้าง" data-en="Wide">กว้าง</span></div>
+        </div>
+        
+        <div style="font-size: 14px; color: #666; background: #eee; padding: 10px; border-radius: 6px;">
+          <b data-th="กำหนดให้:" data-en="Given:">กำหนดให้:</b> สมมติฐานหลัก (Null Hypothesis, H<sub>0</sub>) มีค่าเฉลี่ย μ<sub>0</sub> = 100 เสมอ
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title" data-th="คำถามชวนคิด" data-en="Discussion Questions">คำถามชวนคิด</div>
+        <div class="questions">
+          <div class="q-chip" data-th="ถ้าเลื่อนค่าวิกฤตไปทางขวาเพื่อลด Alpha เกิดอะไรขึ้นกับ Beta?" data-en="If you move the critical value right to reduce Alpha, what happens to Beta?">ถ้าเลื่อนค่าวิกฤตไปทางขวาเพื่อลด Alpha เกิดอะไรขึ้นกับ Beta?</div>
+          <div class="q-chip" data-th="ถ้าค่าเฉลี่ย H1 ยิ่งไกล (Effect Size ใหญ่) เกิดอะไรขึ้น?" data-en="What happens if the H1 Mean is very far away (large Effect Size)?">ถ้าค่าเฉลี่ย H1 ยิ่งไกล (Effect Size ใหญ่) เกิดอะไรขึ้น?</div>
+          <div class="q-chip" data-th="ทำไมเราต้องสนใจ Statistical Power (สีเขียว)?" data-en="Why do we care about Statistical Power (green area)?">ทำไมเราต้องสนใจ Statistical Power (สีเขียว)?</div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="card">
+        <div class="card-title" data-th="กราฟการแจกแจง H<sub>0</sub> และ H<sub>1</sub>" data-en="H<sub>0</sub> & H<sub>1</sub> Distributions">กราฟการแจกแจง H<sub>0</sub> และ H<sub>1</sub></div>
+        
+        <canvas id="cvs" height="340"></canvas>
+        
+        <div class="legend">
+          <div class="legend-item"><div class="legend-color" style="background:rgba(220,53,69,0.7);"></div><span data-th="Type I Error (α)" data-en="Type I Error (α)">Type I Error (α)</span></div>
+          <div class="legend-item"><div class="legend-color" style="background:rgba(13,110,253,0.7);"></div><span data-th="Type II Error (β)" data-en="Type II Error (β)">Type II Error (β)</span></div>
+          <div class="legend-item"><div class="legend-color" style="background:rgba(32,201,151,0.4);"></div><span data-th="Power (1-β)" data-en="Power (1-β)">Power (1-β)</span></div>
+          <div class="legend-item"><div style="width:2px; height:14px; background:#1a1a1a;"></div><span data-th="ค่าวิกฤต (Critical Value)" data-en="Critical Value">ค่าวิกฤต (Critical Value)</span></div>
+        </div>
+
+        <div class="stat-grid">
+          <div class="stat" style="border-bottom: 4px solid #dc3545;"><div class="stat-val" style="color:#dc3545;" id="sAlpha">0.050</div><div class="stat-lbl" data-th="α (False Positive)" data-en="α (False Positive)">α (False Positive)</div></div>
+          <div class="stat" style="border-bottom: 4px solid #0d6efd;"><div class="stat-val" style="color:#0d6efd;" id="sBeta">0.200</div><div class="stat-lbl" data-th="β (False Negative)" data-en="β (False Negative)">β (False Negative)</div></div>
+          <div class="stat" style="border-bottom: 4px solid #20c997;"><div class="stat-val" style="color:#20c997;" id="sPower">0.800</div><div class="stat-lbl" data-th="Power (True Positive)" data-en="Power (True Positive)">Power (True Positive)</div></div>
+        </div>
+
+        <div class="insight" id="insight"></div>
+      </div>
+    </div>
+    
+  </div>
+</div>
+
+<script>
+// --- Language System ---
+var currentLang = 'th';
+function t(th, en) { return currentLang === 'en' ? en : th; }
+function setLang(lang) {
+  currentLang = lang;
+  document.querySelectorAll('.lang-btn').forEach(b => b.classList.toggle('active', b.textContent.trim().toLowerCase() === lang));
+  document.querySelectorAll('[data-th]').forEach(el => {
+    var val = el.getAttribute('data-' + lang);
+    if (val) el.innerHTML = val;
+  });
+  scheduleUpdate(true);
+}
+
+// --- Math Helpers ---
+const MU0 = 100; // Fixed Null Hypothesis Mean
+const XMIN = 50, XMAX = 190;
+
+function pdf(x, mu, sd) {
+  return Math.exp(-0.5 * Math.pow((x - mu) / sd, 2)) / (sd * Math.sqrt(2 * Math.PI));
+}
+
+function erf(z) {
+  const t = 1 / (1 + 0.3275911 * Math.abs(z));
+  const p = t * (0.254829592 + t * (-0.284496736 + t * (1.421413741 + t * (-1.453152027 + t * 1.061405429))));
+  const v = 1 - p * Math.exp(-z * z);
+  return z >= 0 ? v : -v;
+}
+
+function cdf(x, mu, sd) {
+  return 0.5 * (1 + erf((x - mu) / (sd * Math.sqrt(2))));
+}
+
+// --- Animation State ---
+let animCV = 116, targetCV = 116;
+let animMu1 = 125, targetMu1 = 125;
+let animSd = 10, targetSd = 10;
+let rafId = null;
+
+function scheduleUpdate(force = false) {
+  targetCV = parseFloat(document.getElementById('cvSlider').value);
+  targetMu1 = parseFloat(document.getElementById('mu1Slider').value);
+  targetSd = parseFloat(document.getElementById('sdSlider').value);
+  
+  document.getElementById('cvVal').textContent = targetCV.toFixed(1);
+  document.getElementById('mu1Val').textContent = targetMu1;
+  document.getElementById('sdVal').textContent = targetSd.toFixed(1);
+  
+  if (force) {
+    animCV = targetCV; animMu1 = targetMu1; animSd = targetSd;
+    draw();
+  } else if (!rafId) {
+    rafId = requestAnimationFrame(animate);
+  }
+}
+
+function animate() {
+  const SPEED = 0.2;
+  const dCV = targetCV - animCV;
+  const dMu1 = targetMu1 - animMu1;
+  const dSd = targetSd - animSd;
+  
+  if (Math.abs(dCV) < 0.1 && Math.abs(dMu1) < 0.1 && Math.abs(dSd) < 0.1) {
+    animCV = targetCV; animMu1 = targetMu1; animSd = targetSd;
+    rafId = null;
+    draw();
+    return;
+  }
+  
+  animCV += dCV * SPEED;
+  animMu1 += dMu1 * SPEED;
+  animSd += dSd * SPEED;
+  draw();
+  rafId = requestAnimationFrame(animate);
+}
+
+// --- Canvas Drawing ---
+const canvas = document.getElementById('cvs');
+const ctx = canvas.getContext('2d');
+
+function resizeCanvas() {
+  const W = canvas.parentElement.clientWidth - 40;
+  const H = 340;
+  canvas.style.width = W + 'px';
+  canvas.style.height = H + 'px';
+  canvas.width = W * window.devicePixelRatio;
+  canvas.height = H * window.devicePixelRatio;
+  ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+  scheduleUpdate(true);
+}
+window.addEventListener('resize', resizeCanvas);
+
+function draw() {
+  const W = canvas.offsetWidth, H = canvas.offsetHeight;
+  ctx.clearRect(0, 0, W, H);
+  
+  const pad = { top: 20, bottom: 30, left: 20, right: 20 };
+  const cw = W - pad.left - pad.right;
+  const ch = H - pad.top - pad.bottom;
+  
+  // Y Scale based on tallest possible curve (SD=5)
+  const maxPDF = pdf(0, 0, 5); 
+  const toX = (v) => pad.left + ((v - XMIN) / (XMAX - XMIN)) * cw;
+  const toY = (v) => pad.top + ch - (v / maxPDF) * ch * 0.9;
+
+  // 1. Shading Regions
+  function shadeRegion(xStart, xEnd, mu, sd, colorStr) {
+    ctx.beginPath();
+    ctx.moveTo(toX(xStart), toY(0));
+    const steps = 150;
+    for (let i = 0; i <= steps; i++) {
+      const x = xStart + (i / steps) * (xEnd - xStart);
+      ctx.lineTo(toX(x), toY(pdf(x, mu, sd)));
+    }
+    ctx.lineTo(toX(xEnd), toY(0));
+    ctx.closePath();
+    ctx.fillStyle = colorStr;
+    ctx.fill();
+  }
+
+  // Green: Power (Under H1, right of CV)
+  shadeRegion(animCV, XMAX, animMu1, animSd, 'rgba(32, 201, 151, 0.25)');
+  // Red: Type I Error / Alpha (Under H0, right of CV)
+  shadeRegion(animCV, XMAX, MU0, animSd, 'rgba(220, 53, 69, 0.65)');
+  // Blue: Type II Error / Beta (Under H1, left of CV)
+  shadeRegion(XMIN, animCV, animMu1, animSd, 'rgba(13, 110, 253, 0.55)');
+
+  // 2. Draw Curves
+  function drawCurve(mu, sd, color, isDashed = false) {
+    ctx.beginPath();
+    if(isDashed) ctx.setLineDash([5, 4]);
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 2.5;
+    for (let i = 0; i <= 300; i++) {
+      const x = XMIN + (i / 300) * (XMAX - XMIN);
+      const px = toX(x), py = toY(pdf(x, mu, sd));
+      i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+    }
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  drawCurve(MU0, animSd, '#555', false); // H0 Curve (Black/Gray)
+  drawCurve(animMu1, animSd, '#0d6efd', true); // H1 Curve (Blue Dashed)
+
+  // 3. Grid & Axes
+  ctx.strokeStyle = '#888'; ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(pad.left, toY(0)); ctx.lineTo(W - pad.right, toY(0));
+  ctx.stroke();
+  
+  // X-Axis Labels
+  ctx.fillStyle = '#555'; ctx.font = '14px "IBM Plex Sans", sans-serif'; ctx.textAlign = 'center';
+  for (let v = 60; v <= 180; v += 20) {
+    const px = toX(v);
+    ctx.fillText(v, px, toY(0) + 18);
+    ctx.beginPath(); ctx.moveTo(px, toY(0)); ctx.lineTo(px, toY(0) + 5);
+    ctx.strokeStyle = '#999'; ctx.stroke();
+  }
+
+  // 4. Critical Value Line
+  const pxCV = toX(animCV);
+  ctx.beginPath();
+  ctx.moveTo(pxCV, pad.top); ctx.lineTo(pxCV, toY(0));
+  ctx.strokeStyle = '#1a1a1a'; ctx.lineWidth = 2;
+  ctx.stroke();
+  
+  // Labels for means
+  ctx.fillStyle = '#333'; ctx.font = 'bold 15px "IBM Plex Sans", sans-serif';
+  ctx.fillText('H0', toX(MU0), toY(pdf(MU0, MU0, animSd)) - 10);
+  ctx.fillStyle = '#0d6efd';
+  ctx.fillText('H1', toX(animMu1), toY(pdf(animMu1, animMu1, animSd)) - 10);
+
+  updateStats();
+}
+
+function updateStats() {
+  // Alpha = P(X > CV | H0 is true)
+  const alpha = 1 - cdf(animCV, MU0, animSd);
+  // Beta = P(X < CV | H1 is true)
+  const beta = cdf(animCV, animMu1, animSd);
+  const power = 1 - beta;
+
+  document.getElementById('sAlpha').textContent = alpha.toFixed(3);
+  document.getElementById('sBeta').textContent = beta.toFixed(3);
+  document.getElementById('sPower').textContent = power.toFixed(3);
+
+  const ins = document.getElementById('insight');
+  
+  // Dynamic Insights based on current state
+  if (alpha < 0.01) {
+    ins.innerHTML = t(
+      `คุณตั้งค่า <b>Alpha ต่ำมาก</b> (เข้มงวด) ทำให้พื้นที่สีแดง (Type I Error) แทบไม่มี แต่ผลลัพธ์คือพื้นที่สีฟ้า (Type II Error) จะใหญ่ขึ้นทันที นี่คือ <b>Trade-off</b> ของสถิติ`,
+      `You set a <b>very low Alpha</b> (strict test). The red area (Type I Error) is almost gone, but as a result, the blue area (Type II Error) inflates. This is the <b>Trade-off</b> of hypothesis testing.`
+    );
+  } else if (power > 0.95) {
+    ins.innerHTML = t(
+      `<b>Power สูงมาก!</b> เพราะค่าเฉลี่ย H<sub>1</sub> อยู่ไกลจาก H<sub>0</sub> มาก (Effect Size ใหญ่) ทำให้เส้นโค้งทั้งสองแทบไม่ทับซ้อนกันเลย`,
+      `<b>Very High Power!</b> Because H<sub>1</sub> is far from H<sub>0</sub> (large Effect Size), the two curves barely overlap.`
+    );
+  } else if (animSd > 18) {
+    ins.innerHTML = t(
+      `เมื่อข้อมูล <b>กระจายตัวมาก (SD สูง)</b> โค้งทั้งสองจะแบนราบและทับซ้อนกันหนัก ทำให้ทั้ง Type II Error สูง และ Power ต่ำลง`,
+      `When the data is <b>widely spread (high SD)</b>, both curves flatten and overlap heavily, increasing Type II Error and reducing Power.`
+    );
+  } else {
+    ins.innerHTML = t(
+      `ลองขยับแถบเลื่อน <b>"ค่าวิกฤต"</b> ไปทางซ้าย-ขวา แล้วสังเกตการหดและขยายตัวที่สวนทางกันระหว่างพื้นที่สีแดง (α) และสีฟ้า (β)`,
+      `Try moving the <b>Critical Value</b> slider left and right. Observe the inverse relationship (trade-off) between the red area (α) and blue area (β).`
+    );
+  }
+}
+
+// Init
+setTimeout(resizeCanvas, 50);
+setLang('th');
+</script>
+</body>
+</html>

@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>t-Distribution vs Normal Distribution</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;600;700;800&family=IBM+Plex+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: "Noto Sans Thai","IBM Plex Sans",sans-serif; font-size: 18px; font-weight: 600; background: #f5f5f5; color: #1a1a1a; min-height: 100vh; }
+
+.header { background: #fff; border-bottom: 3px solid #1a1a1a; padding: 16px 32px; display: flex; align-items: center; justify-content: space-between; }
+.header-left { display: flex; align-items: baseline; gap: 14px; }
+.header h1 { font-size: 28px; font-weight: 800; }
+.header span { font-size: 20px; font-weight: 600; color: #555; }
+
+.home-btn { text-decoration: none; color: #6c757d; font-size: 15px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border: 1px solid #dee2e6; border-radius: 6px; background: #fff; transition: all 0.2s; flex-shrink: 0; }
+.home-btn:hover { background: #f8f9fa; color: #0d6efd; }
+
+.lang-toggle { display: flex; border: 2px solid #1a1a1a; border-radius: 8px; overflow: hidden; }
+.lang-btn { font-family: inherit; font-size: 16px; font-weight: 700; padding: 6px 16px; border: none; cursor: pointer; background: #fff; color: #888; transition: all .12s; }
+.lang-btn.active { background: #1a1a1a; color: #fff; }
+
+.main { max-width: 1000px; margin: 24px auto; padding: 0 24px; }
+.card { background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 20px; margin-bottom: 16px; }
+.card-title { font-size: 20px; font-weight: 800; margin-bottom: 14px; border-bottom: 1px solid #eee; padding-bottom: 8px; }
+
+/* Layout */
+.layout { display: grid; grid-template-columns: 320px 1fr; gap: 20px; }
+@media (max-width: 850px) { .layout { grid-template-columns: 1fr; } }
+
+/* Controls */
+.slider-group { margin-bottom: 18px; }
+.slider-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px; }
+.slider-name { font-size: 17px; font-weight: 600; }
+.slider-val { font-size: 24px; font-weight: 800; min-width: 48px; text-align: right; color: #0d6efd; }
+input[type=range] { width: 100%; accent-color: #0d6efd; cursor: pointer; }
+.slider-ticks { display: flex; justify-content: space-between; font-size: 14px; font-weight: 600; color: #999; margin-top: 2px; }
+
+/* Toggles */
+.toggle-row { display: flex; align-items: center; gap: 10px; margin-top: 12px; cursor: pointer; }
+.toggle-row input[type="checkbox"] { width: 20px; height: 20px; accent-color: #1a1a1a; cursor: pointer; }
+.toggle-label { font-size: 16px; font-weight: 700; cursor: pointer; user-select: none; }
+
+/* Canvas */
+canvas { width: 100%; display: block; border-radius: 4px; background: #fff; }
+
+/* Stats & Legends */
+.stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 16px; }
+.stat { background: #f8f9fa; border: 1px solid #e0e0e0; border-radius: 6px; padding: 12px; text-align: center; }
+.stat-val { font-size: 24px; font-weight: 800; }
+.stat-lbl { font-size: 14px; font-weight: 600; color: #555; margin-top: 2px; }
+.stat-highlight { color: #dc3545; }
+
+.legend { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 12px; justify-content: center; }
+.legend-item { display: flex; align-items: center; gap: 6px; font-size: 15px; font-weight: 600; color: #555; }
+
+.insight { font-size: 16px; font-weight: 600; color: #333; background: #f8f9fa; border-left: 4px solid #0d6efd; padding: 12px 16px; border-radius: 0 6px 6px 0; margin-top: 16px; line-height: 1.5; }
+
+.questions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.q-chip { font-size: 16px; font-weight: 600; padding: 6px 14px; border: 1px solid #bbb; border-radius: 20px; color: #444; background: #fafafa; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-left">
+    <a href="index.html" class="home-btn" data-th="← หน้าแรก" data-en="← Home">← Home</a>
+    <h1>t-Distribution vs. Normal</h1>
+  </div>
+  <div class="lang-toggle">
+    <button class="lang-btn active" onclick="setLang('th')">TH</button>
+    <button class="lang-btn" onclick="setLang('en')">EN</button>
+  </div>
+</div>
+
+<div class="main">
+  <div class="layout">
+    
+    <div>
+      <div class="card">
+        <div class="card-title" data-th="ตั้งค่าพารามิเตอร์" data-en="Parameters">ตั้งค่าพารามิเตอร์</div>
+
+        <div class="slider-group">
+          <div class="slider-header">
+            <span class="slider-name" data-th="ขนาดตัวอย่าง (n)" data-en="Sample Size (n)">ขนาดตัวอย่าง (n)</span>
+            <span class="slider-val" id="nVal">2</span>
+          </div>
+          <input type="range" id="nSlider" min="2" max="90" value="2" step="1" oninput="scheduleUpdate()">
+          <div class="slider-ticks"><span>2</span><span>30</span><span>60</span><span>90</span></div>
+        </div>
+        
+        <div style="font-size: 14px; color: #666; margin-bottom: 16px;" id="dfInfo">
+          Degrees of Freedom (df) = n - 1 = 1
+        </div>
+
+        <hr style="border: 0; border-top: 1px solid #eee; margin: 16px 0;">
+
+        <label class="toggle-row">
+          <input type="checkbox" id="showTails" onchange="scheduleUpdate()" checked>
+          <span class="toggle-label" data-th="แสดงพื้นที่หาง (|x| &ge; 2)" data-en="Show Tails Area (|x| &ge; 2)">แสดงพื้นที่หาง (|x| &ge; 2)</span>
+        </label>
+      </div>
+
+      <div class="card">
+        <div class="card-title" data-th="คำถามชวนคิด" data-en="Discussion Questions">คำถามชวนคิด</div>
+        <div class="questions">
+          <div class="q-chip" data-th="ทำไม n ยิ่งน้อย โค้ง t ถึงเตี้ยลง?" data-en="Why is the t-curve shorter when n is small?">ทำไม n ยิ่งน้อย โค้ง t ถึงเตี้ยลง?</div>
+          <div class="q-chip" data-th="Fat Tails ส่งผลต่อค่า P-value อย่างไร?" data-en="How do 'Fat Tails' affect the P-value?">Fat Tails ส่งผลต่อค่า P-value อย่างไร?</div>
+          <div class="q-chip" data-th="ที่ n เท่าไร t-dist ถึงจะทับ Normal สนิท?" data-en="At what n does t-dist perfectly match Normal?">ที่ n เท่าไร t-dist ถึงจะทับ Normal สนิท?</div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="card">
+        <div class="card-title" data-th="กราฟเปรียบเทียบการแจกแจง" data-en="Distribution Comparison Graph">กราฟเปรียบเทียบการแจกแจง</div>
+        
+        <canvas id="cvs"></canvas>
+        
+        <div class="legend" style="margin-bottom: 12px;">
+          <div class="legend-item"><div style="width:24px; height:3px; background:#0d6efd;"></div><span data-th="t-Distribution (กลุ่มตัวอย่าง)" data-en="t-Distribution (Sample)">t-Distribution (กลุ่มตัวอย่าง)</span></div>
+          <div class="legend-item"><div style="width:24px; border-top:2px dashed #dc3545;"></div><span data-th="Standard Normal (ประชากร)" data-en="Standard Normal (Population)">Standard Normal (ประชากร)</span></div>
+        </div>
+
+        <div class="stat-grid">
+          <div class="stat"><div class="stat-val" id="sN">2</div><div class="stat-lbl" data-th="n (ตัวอย่าง)" data-en="n (Sample)">n (ตัวอย่าง)</div></div>
+          <div class="stat"><div class="stat-val" id="sDf">1</div><div class="stat-lbl" data-th="df (ชั้นความอิสระ)" data-en="df (Deg. of Freedom)">df (ชั้นความอิสระ)</div></div>
+          <div class="stat" style="background:#e8f4fd; border-color:#0d6efd;"><div class="stat-val" style="color:#0d6efd;" id="stTail">14.76%</div><div class="stat-lbl" data-th="P(|t| &ge; 2)" data-en="P(|t| &ge; 2)">P(|t| &ge; 2)</div></div>
+          <div class="stat"><div class="stat-val stat-highlight" id="szTail">4.55%</div><div class="stat-lbl" data-th="P(|Z| &ge; 2)" data-en="P(|Z| &ge; 2)">P(|Z| &ge; 2)</div></div>
+        </div>
+
+        <div class="insight" id="insight"></div>
+      </div>
+    </div>
+    
+  </div>
+</div>
+
+<script>
+// --- Language System ---
+var currentLang = 'th';
+function t(th, en) { return currentLang === 'en' ? en : th; }
+function setLang(lang) {
+  currentLang = lang;
+  document.querySelectorAll('.lang-btn').forEach(b => b.classList.toggle('active', b.textContent.trim().toLowerCase() === lang));
+  document.querySelectorAll('[data-th]').forEach(el => {
+    var val = el.getAttribute('data-' + lang);
+    if (val) el.innerHTML = val;
+  });
+  scheduleUpdate(true); // Force redraw
+}
+
+// --- Math Helpers (Gamma & PDFs) ---
+// Log-Gamma approximation (Lanczos)
+function gammaln(x) {
+  let j = 0;
+  let cof = [
+    76.18009172947146, -86.50532032941677, 24.01409824083091,
+    -1.231739572450155, 0.1208650973866179e-2, -0.5395239384953e-5
+  ];
+  let ser = 1.000000000190015;
+  let xx = x, y = x, tmp = x + 5.5;
+  tmp -= (x + 0.5) * Math.log(tmp);
+  for (; j < 6; j++) ser += cof[j] / ++y;
+  return Math.log(2.5066282746310005 * ser / xx) - tmp;
+}
+
+// Standard Normal PDF
+function pdf_z(x) {
+  return (1 / Math.sqrt(2 * Math.PI)) * Math.exp(-0.5 * x * x);
+}
+
+// Student's t-Distribution PDF
+function pdf_t(x, df) {
+  // Constant C = Gamma((v+1)/2) / (sqrt(v*pi) * Gamma(v/2))
+  let logC = gammaln((df + 1) / 2) - gammaln(df / 2) - 0.5 * Math.log(df * Math.PI);
+  let C = Math.exp(logC);
+  return C * Math.pow(1 + (x * x) / df, -(df + 1) / 2);
+}
+
+// Numerical Integration for Tail Probabilities P(|X| > threshold)
+function getTailProbZ(threshold) {
+  let sum = 0, dx = 0.01;
+  for (let x = threshold; x < 15; x += dx) sum += pdf_z(x) * dx;
+  return sum * 2;
+}
+
+function getTailProbT(df, threshold) {
+  let sum = 0, dx = 0.01;
+  for (let x = threshold; x < 30; x += dx) sum += pdf_t(x, df) * dx;
+  return sum * 2;
+}
+
+// --- Animation & State ---
+const XMIN = -4.5, XMAX = 4.5, YMAX = 0.45;
+let animN = 2, targetN = 2, rafId = null;
+const FIXED_Z_TAIL = getTailProbZ(2);
+
+function scheduleUpdate(force = false) {
+  targetN = parseInt(document.getElementById('nSlider').value);
+  document.getElementById('nVal').textContent = targetN;
+  document.getElementById('dfInfo').textContent = `Degrees of Freedom (df) = n - 1 = ${targetN - 1}`;
+  
+  if (force) {
+    animN = targetN;
+    draw();
+    updateUI();
+  } else if (!rafId) {
+    rafId = requestAnimationFrame(animate);
+  }
+}
+
+function animate() {
+  const SPEED = 0.15;
+  const dn = targetN - animN;
+  
+  if (Math.abs(dn) < 0.1) {
+    animN = targetN;
+    rafId = null;
+    draw();
+    updateUI();
+    return;
+  }
+  
+  animN += dn * SPEED;
+  draw();
+  updateUI(true); // animating state
+  rafId = requestAnimationFrame(animate);
+}
+
+// --- Canvas Drawing ---
+const canvas = document.getElementById('cvs');
+const ctx = canvas.getContext('2d');
+
+function resizeCanvas() {
+  const W = canvas.parentElement.clientWidth - 40;
+  const H = 320;
+  canvas.style.width = W + 'px';
+  canvas.style.height = H + 'px';
+  canvas.width = W * window.devicePixelRatio;
+  canvas.height = H * window.devicePixelRatio;
+  ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+  scheduleUpdate(true);
+}
+window.addEventListener('resize', resizeCanvas);
+
+function draw() {
+  const W = canvas.offsetWidth, H = canvas.offsetHeight;
+  ctx.clearRect(0, 0, W, H);
+  
+  const pad = { top: 20, bottom: 30, left: 20, right: 20 };
+  const cw = W - pad.left - pad.right;
+  const ch = H - pad.top - pad.bottom;
+  
+  const toX = (v) => pad.left + ((v - XMIN) / (XMAX - XMIN)) * cw;
+  const toY = (v) => pad.top + ch - (v / YMAX) * ch;
+
+  const showTails = document.getElementById('showTails').checked;
+  const currentDf = Math.max(1, animN - 1);
+
+  // 1. Shade Tails
+  if (showTails) {
+    // Shade Normal Tail (Red/Pinkish)
+    ctx.fillStyle = 'rgba(220, 53, 69, 0.15)';
+    shadeRegion(2, XMAX, pdf_z, null);
+    shadeRegion(XMIN, -2, pdf_z, null);
+    
+    // Shade T-Tail (Blueish)
+    ctx.fillStyle = 'rgba(13, 110, 253, 0.25)';
+    shadeRegion(2, XMAX, pdf_t, currentDf);
+    shadeRegion(XMIN, -2, pdf_t, currentDf);
+  }
+
+  // Helper for shading
+  function shadeRegion(xStart, xEnd, pdfFunc, dfArg) {
+    ctx.beginPath();
+    ctx.moveTo(toX(xStart), toY(0));
+    const steps = 100;
+    for (let i = 0; i <= steps; i++) {
+      const x = xStart + (i / steps) * (xEnd - xStart);
+      const y = dfArg ? pdfFunc(x, dfArg) : pdfFunc(x);
+      ctx.lineTo(toX(x), toY(y));
+    }
+    ctx.lineTo(toX(xEnd), toY(0));
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  // 2. Grid & Axes
+  ctx.strokeStyle = '#eee'; ctx.lineWidth = 1;
+  ctx.beginPath();
+  [0.1, 0.2, 0.3, 0.4].forEach(v => {
+    ctx.moveTo(pad.left, toY(v)); ctx.lineTo(W - pad.right, toY(v));
+  });
+  ctx.stroke();
+
+  // X-Axis
+  ctx.strokeStyle = '#888'; ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(pad.left, toY(0)); ctx.lineTo(W - pad.right, toY(0));
+  ctx.stroke();
+  
+  // Center zero line
+  ctx.beginPath(); ctx.setLineDash([3, 3]);
+  ctx.moveTo(toX(0), pad.top); ctx.lineTo(toX(0), toY(0));
+  ctx.strokeStyle = '#ccc'; ctx.stroke(); ctx.setLineDash([]);
+
+  // X-Axis Labels
+  ctx.fillStyle = '#555'; ctx.font = '14px "IBM Plex Sans", sans-serif'; ctx.textAlign = 'center';
+  for (let v = -4; v <= 4; v++) {
+    const px = toX(v);
+    ctx.fillText(v, px, toY(0) + 18);
+    ctx.beginPath(); ctx.moveTo(px, toY(0)); ctx.lineTo(px, toY(0) + 5);
+    ctx.strokeStyle = '#999'; ctx.stroke();
+  }
+
+  // Threshold lines for |x| = 2
+  if (showTails) {
+    ctx.beginPath(); ctx.setLineDash([4, 4]); ctx.strokeStyle = '#555';
+    ctx.moveTo(toX(2), toY(0)); ctx.lineTo(toX(2), toY(0.4));
+    ctx.moveTo(toX(-2), toY(0)); ctx.lineTo(toX(-2), toY(0.4));
+    ctx.stroke(); ctx.setLineDash([]);
+  }
+
+  // 3. Draw Normal Curve (Red Dashed)
+  ctx.beginPath(); ctx.setLineDash([6, 4]); ctx.strokeStyle = '#dc3545'; ctx.lineWidth = 2.5;
+  for (let i = 0; i <= 300; i++) {
+    const x = XMIN + (i / 300) * (XMAX - XMIN);
+    const px = toX(x), py = toY(pdf_z(x));
+    i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+  }
+  ctx.stroke(); ctx.setLineDash([]);
+
+  // 4. Draw T-Curve (Blue Solid)
+  ctx.beginPath(); ctx.strokeStyle = '#0d6efd'; ctx.lineWidth = 3;
+  for (let i = 0; i <= 300; i++) {
+    const x = XMIN + (i / 300) * (XMAX - XMIN);
+    const px = toX(x), py = toY(pdf_t(x, currentDf));
+    i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+  }
+  ctx.stroke();
+}
+
+function updateUI(isAnimating = false) {
+  const currentDf = Math.max(1, targetN - 1);
+  const tTail = getTailProbT(currentDf, 2);
+  
+  document.getElementById('sN').textContent = targetN;
+  document.getElementById('sDf').textContent = currentDf;
+  
+  if (!isAnimating) {
+    document.getElementById('stTail').textContent = (tTail * 100).toFixed(2) + '%';
+    
+    const ins = document.getElementById('insight');
+    if (targetN <= 5) {
+      ins.innerHTML = t(
+        `เมื่อกลุ่มตัวอย่างน้อย (n = ${targetN}) โค้ง t จะเตี้ยกว่าและมี <b>"หางที่อ้วนกว่า (Fat Tails)"</b> ทำให้ความน่าจะเป็นที่จะเกิดค่าสุดโต่ง (เช่น |x| &ge; 2) สูงถึง ${(tTail*100).toFixed(1)}% เพื่อชดเชยความไม่แน่นอนของข้อมูล`,
+        `With a small sample (n = ${targetN}), the t-curve is shorter and has <b>"Fat Tails"</b>. The probability of extreme values (|x| &ge; 2) is as high as ${(tTail*100).toFixed(1)}% to account for data uncertainty.`
+      );
+    } else if (targetN >= 30) {
+      ins.innerHTML = t(
+        `เมื่อกลุ่มตัวอย่างมากพอ (n = ${targetN}) โค้ง t จะยืดสูงขึ้นและหดหางเข้ามาจน <b>ทับซ้อนแนบสนิทกับ Normal Distribution</b> (ความน่าจะเป็นลดลงมาใกล้เคียง 4.55%)`,
+        `With a large enough sample (n = ${targetN}), the t-curve grows taller and its tails shrink, <b>perfectly overlapping the Normal Distribution</b> (tail probability approaches 4.55%).`
+      );
+    } else {
+      ins.innerHTML = t(
+        `เมื่อเพิ่ม n โค้ง t จะค่อยๆ แคบลงและขยับเข้าใกล้ Normal Distribution สังเกตพื้นที่หางสีฟ้าที่ค่อยๆ ลดลง`,
+        `As n increases, the t-curve narrows and approaches the Normal Distribution. Watch the blue tail area gradually decrease.`
+      );
+    }
+  }
+}
+
+// Init
+setTimeout(resizeCanvas, 50);
+setLang('th');
+</script>
+</body>
+</html>

@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Confidence Interval Visualizer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;600;700;800&family=IBM+Plex+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: "Noto Sans Thai","IBM Plex Sans",sans-serif; font-size: 19px; font-weight: 600; background: #f5f5f5; color: #1a1a1a; min-height: 100vh; }
+.header { background: #fff; border-bottom: 3px solid #1a1a1a; padding: 16px 32px; display: flex; align-items: center; justify-content: space-between; }
+.header-left { display: flex; align-items: baseline; gap: 14px; }
+.header h1 { font-size: 30px; font-weight: 800; flex: 1; }
+.home-btn { text-decoration: none; color: #6c757d; font-size: 16px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border: 1px solid #dee2e6; border-radius: 6px; background: #fff; transition: all 0.2s; flex-shrink: 0; }
+.home-btn:hover { background: #f8f9fa; color: #0d6efd; }
+.lang-toggle { display: flex; border: 2px solid #1a1a1a; border-radius: 8px; overflow: hidden; }
+.lang-btn { font-family: inherit; font-size: 16px; font-weight: 700; padding: 6px 16px; border: none; cursor: pointer; background: #fff; color: #888; transition: all .12s; }
+.lang-btn.active { background: #1a1a1a; color: #fff; }
+.main { max-width: 1100px; margin: 24px auto; padding: 0 24px; }
+.card { background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 20px; margin-bottom: 16px; }
+.card-title { font-size: 21px; font-weight: 800; margin-bottom: 14px; border-bottom: 1px solid #eee; padding-bottom: 8px; }
+.slider-group { margin-bottom: 16px; }
+.slider-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 5px; }
+.slider-name { font-size: 16px; font-weight: 600; }
+.slider-val { font-size: 22px; font-weight: 800; min-width: 52px; text-align: right; }
+input[type=range] { width: 100%; accent-color: #1a1a1a; cursor: pointer; }
+.slider-ticks { display: flex; justify-content: space-between; font-size: 13px; font-weight: 600; color: #999; margin-top: 2px; }
+.mode-group { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
+.mode-btn { font-family: inherit; font-size: 16px; font-weight: 700; padding: 6px 16px; border: 1.5px solid #bbb; border-radius: 20px; background: #fff; cursor: pointer; transition: all .12s; }
+.mode-btn.active { background: #1a1a1a; color: #fff; border-color: #1a1a1a; }
+.btn { font-family: inherit; font-size: 17px; font-weight: 800; padding: 8px 20px; border-radius: 6px; border: 1.5px solid #1a1a1a; background: #1a1a1a; color: #fff; cursor: pointer; transition: background .12s; }
+.btn:hover { background: #333; }
+.btn-sec { background: #fff; color: #1a1a1a; }
+.btn-sec:hover { background: #f0f0f0; }
+.btn-group { display: flex; gap: 8px; flex-wrap: wrap; }
+.ctrl-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.ctrl-label { font-size: 17px; font-weight: 600; }
+select { font-family: inherit; font-size: 17px; font-weight: 700; padding: 6px 12px; border: 1.5px solid #bbb; border-radius: 6px; background: #fff; }
+canvas { width: 100%; display: block; border-radius: 4px; }
+.stat-grid-4 { display: grid; grid-template-columns: repeat(4,1fr); gap: 10px; }
+.stat-grid-3 { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; }
+.stat { background: #f7f7f7; border: 1px solid #e0e0e0; border-radius: 6px; padding: 10px; text-align: center; }
+.stat-val { font-size: 26px; font-weight: 800; }
+.stat-lbl { font-size: 14px; font-weight: 600; color: #666; margin-top: 2px; }
+.stat.hit { background: #edfaf3; border-color: #7ecfa8; }
+.stat.miss { background: #fdecea; border-color: #e8a8a8; }
+.insight { font-size: 17px; font-weight: 600; color: #333; background: #f7f7f7; border-left: 4px solid #1a1a1a; padding: 10px 16px; border-radius: 0 6px 6px 0; min-height: 40px; margin-top: 12px; }
+.questions { display: flex; flex-wrap: wrap; gap: 8px; }
+.q-chip { font-size: 17px; font-weight: 600; padding: 5px 14px; border: 1px solid #bbb; border-radius: 20px; color: #444; background: #fafafa; }
+.layout { display: grid; grid-template-columns: 270px 1fr; gap: 20px; }
+/* Color swatches */
+.swatch { display: inline-block; width: 14px; height: 14px; border-radius: 3px; vertical-align: middle; margin-right: 4px; }
+.legend { display: flex; gap: 18px; flex-wrap: wrap; margin-top: 10px; }
+.legend-item { display: flex; align-items: center; gap: 6px; font-size: 15px; font-weight: 600; color: #555; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-left">
+    <a href="index.html" class="home-btn" data-th="&#8592; หน้าแรก" data-en="&#8592; Home">&#8592; Home</a>
+    <h1>Confidence Interval Visualizer</h1>
+  </div>
+  <div class="lang-toggle">
+    <button class="lang-btn active" onclick="setLang('th')">TH</button>
+    <button class="lang-btn" onclick="setLang('en')">EN</button>
+  </div>
+</div>
+
+<div class="main">
+
+  <div class="card">
+    <div class="card-title" data-th="ความเชื่อมั่น (Confidence Level) หมายความว่าอะไร?" data-en="What does Confidence Level mean?">ความเชื่อมั่น (Confidence Level) หมายความว่าอะไร?</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px">
+      <div style="background:#f7f7f7;border-radius:8px;padding:14px">
+        <div style="font-size:16px;font-weight:800;margin-bottom:6px" data-th="&#128257; ขั้นตอน" data-en="&#128257; Steps">&#128257; ขั้นตอน</div>
+        <ol style="font-size:15px;font-weight:600;color:#444;line-height:1.75;padding-left:18px">
+          <li data-th="กำหนด population ที่มี μ จริงอยู่" data-en="Define a population with true μ">กำหนด population ที่มี μ จริงอยู่</li>
+          <li data-th="สุ่มตัวอย่าง n คน แต่ละครั้ง" data-en="Draw a sample of size n">สุ่มตัวอย่าง n คน แต่ละครั้ง</li>
+          <li data-th="สร้าง CI จากแต่ละตัวอย่าง" data-en="Construct a CI for each sample">สร้าง CI จากแต่ละตัวอย่าง</li>
+          <li data-th="นับว่า CI กี่ % ครอบ μ จริง" data-en="Count % of CIs capturing true μ">นับว่า CI กี่ % ครอบ μ จริง</li>
+        </ol>
+      </div>
+      <div style="background:#edfaf3;border:1px solid #7ecfa8;border-radius:8px;padding:14px">
+        <div style="font-size:16px;font-weight:800;color:#2a6b2a;margin-bottom:6px" data-th="&#10003; ความเข้าใจที่ถูก" data-en="&#10003; Correct Understanding">&#10003; ความเข้าใจที่ถูก</div>
+        <p style="font-size:15px;font-weight:600;color:#333;line-height:1.7" data-th='"ถ้าเราทำการทดลองนี้ซ้ำหลายครั้ง <b>95%</b> ของ CI ที่สร้างขึ้นจะครอบคลุม μ จริง"' data-en='"If we repeat this experiment many times, <b>95%</b> of the constructed CIs will contain the true μ"'>"ถ้าเราทำการทดลองนี้ซ้ำหลายครั้ง <b>95%</b> ของ CI ที่สร้างขึ้นจะครอบคลุม μ จริง"</p>
+      </div>
+      <div style="background:#fdecea;border:1px solid #e8a8a8;border-radius:8px;padding:14px">
+        <div style="font-size:16px;font-weight:800;color:#8b1a1a;margin-bottom:6px" data-th="&#10007; ความเข้าใจที่ผิด" data-en="&#10007; Common Misconception">&#10007; ความเข้าใจที่ผิด</div>
+        <p style="font-size:15px;font-weight:600;color:#333;line-height:1.7" data-th='"CI นี้มีโอกาส 95% ที่จะมี μ อยู่ข้างใน" — ผิด! เมื่อคำนวณแล้ว CI นั้นครอบหรือไม่ครอบ μ เป็นที่เรียบร้อยแล้ว' data-en='"There is a 95% probability that the true μ is in this CI" — False! Once calculated, the CI either captures the true μ or it does not.'>"CI นี้มีโอกาส 95% ที่จะมี μ อยู่ข้างใน" — ผิด! เมื่อคำนวณแล้ว CI นั้นครอบหรือไม่ครอบ μ เป็นที่เรียบร้อยแล้ว</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="layout">
+    <div>
+      <div class="card">
+        <div class="card-title" data-th="ตั้งค่า" data-en="Parameters">ตั้งค่า</div>
+
+        <div class="slider-group">
+          <div class="slider-header">
+            <span class="slider-name" data-th="μ จริง (population mean)" data-en="True μ (population mean)">μ จริง (population mean)</span>
+            <span class="slider-val" id="vMu">50</span>
+          </div>
+          <input type="range" id="rMu" min="20" max="80" value="50" step="1" oninput="onParamChange()">
+          <div class="slider-ticks"><span>20</span><span>50</span><span>80</span></div>
+        </div>
+
+        <div class="slider-group">
+          <div class="slider-header">
+            <span class="slider-name" data-th="σ (population SD)" data-en="σ (population SD)">σ (population SD)</span>
+            <span class="slider-val" id="vSigma">10</span>
+          </div>
+          <input type="range" id="rSigma" min="2" max="30" value="10" step="1" oninput="onParamChange()">
+          <div class="slider-ticks"><span>2</span><span>16</span><span>30</span></div>
+        </div>
+
+        <div class="slider-group">
+          <div class="slider-header">
+            <span class="slider-name" data-th="ขนาดตัวอย่าง n" data-en="Sample size n">ขนาดตัวอย่าง n</span>
+            <span class="slider-val" id="vN">30</span>
+          </div>
+          <input type="range" id="rN" min="5" max="100" value="30" step="1" oninput="onParamChange()">
+          <div class="slider-ticks"><span>5</span><span>50</span><span>100</span></div>
+        </div>
+
+        <div style="margin-bottom:14px">
+          <div style="font-size:15px;font-weight:700;margin-bottom:8px" data-th="ระดับความเชื่อมั่น" data-en="Confidence Level">ระดับความเชื่อมั่น</div>
+          <div class="mode-group">
+            <button class="mode-btn" onclick="setConf(0.90,this)">90%</button>
+            <button class="mode-btn active" onclick="setConf(0.95,this)">95%</button>
+            <button class="mode-btn" onclick="setConf(0.99,this)">99%</button>
+          </div>
+        </div>
+
+        <div style="font-size:15px;font-weight:700;margin-bottom:8px" data-th="โหมด" data-en="Mode">โหมด</div>
+        <div class="mode-group" style="margin-bottom:14px">
+          <button class="mode-btn active" onclick="setMode('z',this)" data-th="Z-interval (σ รู้)" data-en="Z-interval (σ known)">Z-interval (σ รู้)</button>
+          <button class="mode-btn" onclick="setMode('t',this)" data-th="t-interval (σ ไม่รู้)" data-en="t-interval (σ unknown)">t-interval (σ ไม่รู้)</button>
+        </div>
+
+        <div style="font-size:14px;font-weight:600;color:#555;background:#f7f7f7;border-radius:6px;padding:10px;margin-bottom:14px" id="formulaBox">
+          Z&#8322; = 1.960 &nbsp;|&nbsp; SE = &#963;/&#8730;n = 0.33<br>
+          CI = x&#772; &#177; 1.960 &times; 0.33
+        </div>
+
+        <div class="btn-group">
+          <button class="btn" onclick="addSamples(1)" data-th="+1 ตัวอย่าง" data-en="+1 Sample">+1 ตัวอย่าง</button>
+          <button class="btn btn-sec" onclick="addSamples(20)">+20</button>
+          <button class="btn btn-sec" onclick="addSamples(100)">+100</button>
+          <button class="btn btn-sec" onclick="resetAll()" data-th="รีเซ็ต" data-en="Reset">รีเซ็ต</button>
+        </div>
+      </div>
+
+    </div>
+
+    <div>
+      <div class="card">
+        <div class="card-title">
+          <span data-th="CI แต่ละตัวอย่าง" data-en="Confidence Intervals per sample">CI แต่ละตัวอย่าง</span>
+          <span style="font-size:14px;font-weight:600;color:#888;margin-left:8px" data-th="(แสดงล่าสุด 100 CI)" data-en="(Showing last 100 CIs)">(แสดงล่าสุด 100 CI)</span>
+        </div>
+        <canvas id="cvsCI" height="400"></canvas>
+        <div class="legend">
+          <div class="legend-item"><div style="width:18px;height:4px;background:#2a8a4a;border-radius:2px"></div><span data-th="CI ครอบ μ จริง" data-en="CI captures true μ">CI ครอบ μ จริง</span></div>
+          <div class="legend-item"><div style="width:18px;height:4px;background:#d63c3c;border-radius:2px"></div><span data-th="CI ไม่ครอบ μ จริง" data-en="CI misses true μ">CI ไม่ครอบ μ จริง</span></div>
+          <div class="legend-item"><div style="width:2px;height:16px;background:#1a1a1a;display:inline-block"></div><span data-th="μ จริง" data-en="True μ">μ จริง</span></div>
+          <div class="legend-item"><div style="width:8px;height:8px;border-radius:50%;background:#555;display:inline-block"></div><span data-th="x̄ (sample mean)" data-en="x̄ (sample mean)">x̄ (sample mean)</span></div>
+        </div>
+
+        <div style="border-top:1px solid #eee;margin-top:16px;padding-top:14px">
+          <div style="font-size:16px;font-weight:800;margin-bottom:10px" data-th="สถิติสรุป" data-en="Summary Statistics">สถิติสรุป</div>
+          <div class="stat-grid-3" style="margin-bottom:10px">
+            <div class="stat hit">
+              <div class="stat-val" id="sHit">0</div>
+              <div class="stat-lbl" data-th="CI ครอบ μ" data-en="CI captures μ">CI ครอบ μ</div>
+            </div>
+            <div class="stat miss">
+              <div class="stat-val" id="sMiss">0</div>
+              <div class="stat-lbl" data-th="CI ไม่ครอบ μ" data-en="CI misses μ">CI ไม่ครอบ μ</div>
+            </div>
+            <div class="stat">
+              <div class="stat-val" id="sCoverage">&#8212;</div>
+              <div class="stat-lbl" data-th="Coverage จริง" data-en="Actual Coverage">Coverage จริง</div>
+            </div>
+          </div>
+          <div class="stat-grid-3">
+            <div class="stat">
+              <div class="stat-val" id="sTotal">0</div>
+              <div class="stat-lbl" data-th="ตัวอย่างทั้งหมด" data-en="Total Samples">ตัวอย่างทั้งหมด</div>
+            </div>
+            <div class="stat">
+              <div class="stat-val" id="sWidth">&#8212;</div>
+              <div class="stat-lbl" data-th="ความกว้าง CI เฉลี่ย" data-en="Avg CI Width">ความกว้าง CI เฉลี่ย</div>
+            </div>
+            <div class="stat">
+              <div class="stat-val" id="sConf">95%</div>
+              <div class="stat-lbl">Confidence Level</div>
+            </div>
+          </div>
+          <div class="insight" id="insight" data-th='กด "+1 ตัวอย่าง" เพื่อเริ่มสร้าง CI ตัวแรก' data-en='Click "+1 Sample" to construct the first CI'>กด "+1 ตัวอย่าง" เพื่อเริ่มสร้าง CI ตัวแรก</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title" data-th="เปรียบเทียบความกว้าง CI ตาม Confidence Level และ n" data-en="Compare CI Width by Confidence Level and n">เปรียบเทียบความกว้าง CI ตาม Confidence Level และ n</div>
+    <canvas id="cvsWidth" height="160"></canvas>
+    <div style="margin-top:8px;font-size:14px;font-weight:600;color:#555" id="widthNote"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title" data-th="คำถามชวนคิด" data-en="Discussion Questions">คำถามชวนคิด</div>
+    <div class="questions">
+      <div class="q-chip" data-th="ทำไม CI บางตัวถึงไม่ครอบ μ จริง?" data-en="Why do some CIs miss the true μ?">ทำไม CI บางตัวถึงไม่ครอบ μ จริง?</div>
+      <div class="q-chip" data-th="เพิ่ม confidence level แล้ว CI กว้างขึ้นหรือแคบลง?" data-en="Does increasing confidence level make CI wider or narrower?">เพิ่ม confidence level แล้ว CI กว้างขึ้นหรือแคบลง?</div>
+      <div class="q-chip" data-th="เพิ่ม n แล้ว coverage เปลี่ยนไหม?" data-en="Does increasing n change coverage?">เพิ่ม n แล้ว coverage เปลี่ยนไหม?</div>
+      <div class="q-chip" data-th="Z-interval กับ t-interval ต่างกันอย่างไรเมื่อ n เล็ก?" data-en="How do Z-interval and t-interval differ when n is small?">Z-interval กับ t-interval ต่างกันอย่างไรเมื่อ n เล็ก?</div>
+      <div class="q-chip" data-th="ถ้าสุ่ม 100 ครั้ง ควรพลาดกี่ CI ที่ conf=95%?" data-en="If you draw 100 CIs at conf=95%, how many should miss?">ถ้าสุ่ม 100 ครั้ง ควรพลาดกี่ CI ที่ conf=95%?</div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// --- Language System ---
+var currentLang = 'th';
+function t(th, en) { return currentLang === 'en' ? en : th; }
+function setLang(lang) {
+  currentLang = lang;
+  document.querySelectorAll('.lang-btn').forEach(b => b.classList.toggle('active', b.textContent.trim().toLowerCase() === lang));
+  document.querySelectorAll('[data-th]').forEach(el => {
+    var val = el.getAttribute('data-' + lang);
+    if (val) el.innerHTML = val;
+  });
+  updateStats();
+  drawWidthChart();
+}
+
+// ── State ──────────────────────────────────────────────────────────────
+var mu = 50, sigma = 10, sampleN = 30, confLevel = 0.95, ciMode = 'z';
+var intervals = [];   // [{lo, hi, xbar, hit}]
+
+// ── Math helpers ───────────────────────────────────────────────────────
+function randNorm(m, s) {
+  var u = 0, v = 0;
+  while (!u) u = Math.random();
+  while (!v) v = Math.random();
+  return m + s * Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+}
+
+// z* critical values
+var Z_TABLE = { 0.90: 1.645, 0.95: 1.960, 0.99: 2.576 };
+
+// t* critical value (approx via Cornish-Fisher / lookup table for common df)
+function tCrit(df, conf) {
+  var alpha2 = (1 - conf) / 2;
+  // Simple lookup for common df; fallback to normal for large df
+  var tbl = {
+    4:  {0.05:2.776, 0.025:4.604, 0.005:7.173},
+    9:  {0.05:1.833, 0.025:2.262, 0.005:3.250},
+    14: {0.05:1.761, 0.025:2.145, 0.005:2.977},
+    19: {0.05:1.729, 0.025:2.093, 0.005:2.861},
+    24: {0.05:1.711, 0.025:2.064, 0.005:2.797},
+    29: {0.05:1.699, 0.025:2.045, 0.005:2.756},
+    39: {0.05:1.685, 0.025:2.023, 0.005:2.708},
+    59: {0.05:1.671, 0.025:2.001, 0.005:2.660},
+    99: {0.05:1.661, 0.025:1.984, 0.005:2.626}
+  };
+  if (df >= 120) return Z_TABLE[conf] || 1.96;
+  var keys = Object.keys(tbl).map(Number).sort(function(a,b){return a-b;});
+  var bestKey = keys[keys.length - 1];
+  for (var i = 0; i < keys.length; i++) { if (keys[i] >= df) { bestKey = keys[i]; break; } }
+  var row = tbl[bestKey];
+  var a2k = alpha2.toFixed(3);
+  return row[a2k] || Z_TABLE[conf] || 1.96;
+}
+
+function getCritical() {
+  if (ciMode === 'z') return Z_TABLE[confLevel] || 1.96;
+  return tCrit(sampleN - 1, confLevel);
+}
+
+function getSE(s) {
+  // s = sample sd (used for t), ignored for z
+  if (ciMode === 'z') return sigma / Math.sqrt(sampleN);
+  return s / Math.sqrt(sampleN);
+}
+
+// ── Param sync ─────────────────────────────────────────────────────────
+function onParamChange() {
+  mu     = parseInt(document.getElementById('rMu').value);
+  sigma  = parseInt(document.getElementById('rSigma').value);
+  sampleN = parseInt(document.getElementById('rN').value);
+  document.getElementById('vMu').textContent    = mu;
+  document.getElementById('vSigma').textContent = sigma;
+  document.getElementById('vN').textContent     = sampleN;
+  updateFormula();
+  resetAll();
+}
+
+function setConf(c, btn) {
+  confLevel = c;
+  document.querySelectorAll('.mode-btn').forEach(function(b) {
+    if (b.textContent === '90%' || b.textContent === '95%' || b.textContent === '99%')
+      b.classList.remove('active');
+  });
+  btn.classList.add('active');
+  document.getElementById('sConf').textContent = (c * 100) + '%';
+  updateFormula();
+  resetAll();
+}
+
+function setMode(m, btn) {
+  ciMode = m;
+  // only toggle z/t buttons
+  document.querySelectorAll('.mode-btn').forEach(function(b) {
+    if (b.textContent.includes('Z-interval') || b.textContent.includes('t-interval'))
+      b.classList.remove('active');
+  });
+  btn.classList.add('active');
+  updateFormula();
+  resetAll();
+}
+
+function updateFormula() {
+  var crit = getCritical();
+  var se = ciMode === 'z' ? (sigma / Math.sqrt(sampleN)).toFixed(3) : 's/√' + sampleN;
+  var box = document.getElementById('formulaBox');
+  if (ciMode === 'z') {
+    box.innerHTML = 'Z&#8322; = ' + crit.toFixed(3) + ' &nbsp;|&nbsp; SE = &sigma;/&radic;n = ' + se
+      + '<br>CI = x&#772; &plusmn; ' + crit.toFixed(3) + ' &times; ' + se;
+  } else {
+    box.innerHTML = 't*(df=' + (sampleN-1) + ') = ' + crit.toFixed(3)
+      + '<br>CI = x&#772; &plusmn; ' + crit.toFixed(3) + ' &times; s/&radic;n';
+  }
+}
+
+// ── Sample generation ──────────────────────────────────────────────────
+function makeSample() {
+  var data = [];
+  for (var i = 0; i < sampleN; i++) data.push(randNorm(mu, sigma));
+  var xbar = data.reduce(function(a,b){return a+b;}, 0) / sampleN;
+  var s = Math.sqrt(data.reduce(function(a,b){return a+(b-xbar)*(b-xbar);}, 0) / (sampleN-1));
+  var crit = getCritical();
+  var se = ciMode === 'z' ? sigma / Math.sqrt(sampleN) : s / Math.sqrt(sampleN);
+  var margin = crit * se;
+  var lo = xbar - margin, hi = xbar + margin;
+  var hit = (lo <= mu && mu <= hi);
+  return { lo: lo, hi: hi, xbar: xbar, hit: hit, width: hi - lo };
+}
+
+function addSamples(k) {
+  for (var i = 0; i < k; i++) intervals.push(makeSample());
+  drawCI();
+  drawWidthChart();
+  updateStats();
+}
+
+function resetAll() {
+  intervals = [];
+  drawCI();
+  drawWidthChart();
+  updateStats();
+}
+
+// ── Stats panel ────────────────────────────────────────────────────────
+function updateStats() {
+  var n = intervals.length;
+  var ins = document.getElementById('insight');
+  if (n === 0) {
+    ['sHit','sMiss','sCoverage','sTotal','sWidth'].forEach(function(id) {
+      document.getElementById(id).textContent = id === 'sTotal' ? '0' : '&#8212;';
+    });
+    ins.textContent = t('กด "+1 ตัวอย่าง" เพื่อเริ่มสร้าง CI ตัวแรก', 'Click "+1 Sample" to construct the first CI');
+    return;
+  }
+  var hits = intervals.filter(function(d){return d.hit;}).length;
+  var misses = n - hits;
+  var coverage = (hits / n * 100).toFixed(1) + '%';
+  var avgWidth = (intervals.reduce(function(a,b){return a+b.width;},0)/n).toFixed(2);
+  document.getElementById('sHit').textContent      = hits;
+  document.getElementById('sMiss').textContent     = misses;
+  document.getElementById('sCoverage').textContent = coverage;
+  document.getElementById('sTotal').textContent    = n;
+  document.getElementById('sWidth').textContent    = avgWidth;
+
+  var target = (confLevel * 100).toFixed(0);
+  var covNum = parseFloat(coverage);
+  if (n < 5) {
+    ins.textContent = t('ยังน้อยเกินไป — ลองกด "+20" หรือ "+100" เพื่อดู pattern', 'Still too few — try "+20" or "+100" to see the pattern');
+  } else if (n >= 100) {
+    ins.textContent = t('Coverage จริง ' + coverage + ' (เป้าหมาย ' + target + '%) ' + (Math.abs(covNum - confLevel*100) < 3 ? '— ใกล้เคียงทฤษฎีมาก!' : '— ยังห่างจากทฤษฎีเล็กน้อย ลองเพิ่มตัวอย่าง'),
+                        'Actual Coverage ' + coverage + ' (Target ' + target + '%) ' + (Math.abs(covNum - confLevel*100) < 3 ? '— Very close to theory!' : '— Slightly off from theory, try adding more samples'));
+  } else {
+    ins.textContent = t('Coverage ตอนนี้ ' + coverage + ' จาก ' + n + ' CI — ยิ่งสุ่มมากยิ่งเข้าใกล้ ' + target + '%',
+                        'Current Coverage ' + coverage + ' from ' + n + ' CIs — more samples bring it closer to ' + target + '%');
+  }
+}
+
+// ── Draw CI lines ──────────────────────────────────────────────────────
+function getCtx(id, h) {
+  var cvs = document.getElementById(id);
+  var DPR = window.devicePixelRatio || 1;
+  var W = cvs.offsetWidth;
+  cvs.width = W * DPR;
+  cvs.height = h * DPR;
+  var ctx = cvs.getContext('2d');
+  ctx.scale(DPR, DPR);
+  return { ctx: ctx, W: W, H: h };
+}
+
+function drawCI() {
+  var r = getCtx('cvsCI', 400);
+  var ctx = r.ctx, W = r.W, H = r.H;
+  ctx.clearRect(0, 0, W, H);
+
+  var display = intervals.slice(-100);  // show last 100
+  var nRows = display.length;
+
+  // determine x range: mu ± 4*sigma/sqrt(1) gives room
+  var spread = sigma * 4;
+  var xMin = mu - spread, xMax = mu + spread;
+  var pad = { left: 54, right: 20, top: 16, bottom: 28 };
+  var cw = W - pad.left - pad.right;
+  var ch = H - pad.top - pad.bottom;
+
+  function toX(v) { return pad.left + (v - xMin) / (xMax - xMin) * cw; }
+
+  // ── grid & axis ──
+  ctx.strokeStyle = '#eee'; ctx.lineWidth = 1;
+  var xTicks = 6;
+  for (var i = 0; i <= xTicks; i++) {
+    var v = xMin + i * (xMax - xMin) / xTicks;
+    var px = toX(v);
+    ctx.beginPath(); ctx.moveTo(px, pad.top); ctx.lineTo(px, H - pad.bottom); ctx.stroke();
+    ctx.fillStyle = '#aaa'; ctx.font = '13px IBM Plex Sans,sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText(v.toFixed(1), px, H - pad.bottom + 14);
+  }
+
+  // ── mu line ──
+  var muX = toX(mu);
+  ctx.beginPath(); ctx.moveTo(muX, pad.top); ctx.lineTo(muX, H - pad.bottom);
+  ctx.strokeStyle = '#1a1a1a'; ctx.lineWidth = 2; ctx.stroke();
+  ctx.fillStyle = '#1a1a1a'; ctx.font = 'bold 14px IBM Plex Sans,sans-serif'; ctx.textAlign = 'center';
+  ctx.fillText('μ=' + mu, muX, pad.top - 3);
+
+  if (nRows === 0) return;
+
+  var rowH = ch / Math.max(nRows, 1);
+  var lineH = Math.max(Math.min(rowH * 0.55, 14), 3);
+  var dotR  = Math.max(lineH * 0.55, 2.5);
+
+  display.forEach(function(d, i) {
+    var y = pad.top + (i + 0.5) * (ch / nRows);
+    var lx = toX(d.lo), hx = toX(d.hi), mx = toX(d.xbar);
+    var hit = d.hit;
+    var lineColor = hit ? '#2a8a4a' : '#d63c3c';
+    var alpha = nRows > 50 ? 0.75 : 1;
+
+    // CI bar
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = hit ? 'rgba(42,138,74,0.12)' : 'rgba(214,60,60,0.10)';
+    ctx.fillRect(lx, y - lineH/2, hx - lx, lineH);
+
+    // CI line
+    ctx.beginPath(); ctx.moveTo(lx, y); ctx.lineTo(hx, y);
+    ctx.strokeStyle = lineColor; ctx.lineWidth = Math.max(lineH * 0.35, 1.5); ctx.stroke();
+
+    // end caps
+    ctx.beginPath(); ctx.moveTo(lx, y - lineH/2); ctx.lineTo(lx, y + lineH/2);
+    ctx.strokeStyle = lineColor; ctx.lineWidth = 1.5; ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(hx, y - lineH/2); ctx.lineTo(hx, y + lineH/2);
+    ctx.strokeStyle = lineColor; ctx.lineWidth = 1.5; ctx.stroke();
+
+    // xbar dot
+    ctx.beginPath(); ctx.arc(mx, y, dotR, 0, Math.PI * 2);
+    ctx.fillStyle = hit ? '#1a5c30' : '#8b1a1a'; ctx.fill();
+    ctx.globalAlpha = 1;
+  });
+}
+
+// ── Width comparison chart ─────────────────────────────────────────────
+function drawWidthChart() {
+  var r = getCtx('cvsWidth', 160);
+  var ctx = r.ctx, W = r.W, H = r.H;
+  ctx.clearRect(0, 0, W, H);
+
+  var crit = getCritical();
+  var seBase = ciMode === 'z' ? sigma / Math.sqrt(sampleN) : sigma / Math.sqrt(sampleN); // approx
+
+  // Compare: 3 conf levels x current n, and current conf x 3 n values
+  var cols = [
+    { label: '90%', conf: 0.90, n: sampleN, color: '#aaa' },
+    { label: '95%', conf: 0.95, n: sampleN, color: '#555' },
+    { label: '99%', conf: 0.99, n: sampleN, color: '#1a1a1a' },
+    { label: 'n=' + Math.max(5, Math.round(sampleN/2)), conf: confLevel, n: Math.max(5, Math.round(sampleN/2)), color: '#7bc8e0' },
+    { label: 'n=' + sampleN, conf: confLevel, n: sampleN, color: '#2980b9' },
+    { label: 'n=' + Math.min(200, sampleN*2), conf: confLevel, n: Math.min(200, sampleN*2), color: '#0d3d6b' }
+  ];
+
+  // Highlight active column
+  cols.forEach(function(c) { c.active = (Math.abs(c.conf - confLevel) < 0.001 && c.n === sampleN); });
+
+  cols.forEach(function(c) {
+    var z = Z_TABLE[c.conf] || 1.96;
+    c.width = 2 * z * sigma / Math.sqrt(c.n);
+  });
+  var maxW = Math.max.apply(null, cols.map(function(c){return c.width;}));
+
+  var pad = { left: 10, right: 10, top: 18, bottom: 30 };
+  var cw = W - pad.left - pad.right;
+  var ch = H - pad.top - pad.bottom;
+  var barW = cw / cols.length - 6;
+
+  cols.forEach(function(c, i) {
+    var bh = (c.width / maxW) * ch * 0.88;
+    var x = pad.left + i * (cw / cols.length) + 3;
+    var y = pad.top + ch - bh;
+
+    ctx.fillStyle = c.active ? c.color : c.color + '99';
+    ctx.fillRect(x, y, barW, bh);
+
+    if (c.active) {
+      ctx.strokeStyle = '#1a1a1a'; ctx.lineWidth = 2;
+      ctx.strokeRect(x, y, barW, bh);
+    }
+
+    ctx.fillStyle = '#444'; ctx.font = '600 13px IBM Plex Sans,sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText(c.label, x + barW/2, H - pad.bottom + 14);
+    ctx.fillStyle = '#666'; ctx.font = '600 11px IBM Plex Sans,sans-serif';
+    ctx.fillText(c.width.toFixed(1), x + barW/2, y - 3);
+  });
+
+  // divider between groups
+  var divX = pad.left + 3 * (cw / cols.length);
+  ctx.beginPath(); ctx.setLineDash([4,3]);
+  ctx.moveTo(divX - 2, pad.top); ctx.lineTo(divX - 2, H - pad.bottom);
+  ctx.strokeStyle = '#ccc'; ctx.lineWidth = 1; ctx.stroke(); ctx.setLineDash([]);
+
+  ctx.fillStyle = '#888'; ctx.font = '600 12px IBM Plex Sans,sans-serif'; ctx.textAlign = 'center';
+  ctx.fillText(t('เปลี่ยน Conf. Level (n=', 'Change Conf. Level (n=') + sampleN + ')', pad.left + 1.5 * (cw/cols.length), pad.top - 4);
+  ctx.fillText(t('เปลี่ยน n (Conf=', 'Change n (Conf=') + (confLevel*100).toFixed(0) + '%)', pad.left + 4.5 * (cw/cols.length), pad.top - 4);
+
+  var widthNotePrefix = t('ความกว้าง CI ปัจจุบัน = ', 'Current CI Width = ');
+  document.getElementById('widthNote').textContent =
+    widthNotePrefix + (2 * getCritical() * sigma / Math.sqrt(sampleN)).toFixed(3)
+    + ' | z*/t* = ' + getCritical().toFixed(3) + ' | SE = ' + (sigma/Math.sqrt(sampleN)).toFixed(3);
+}
+
+// ── Init ───────────────────────────────────────────────────────────────
+setLang('th');
+updateFormula();
+drawCI();
+drawWidthChart();
+window.addEventListener('resize', function() { drawCI(); drawWidthChart(); });
+</script>
+</body>
+</html>

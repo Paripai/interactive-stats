@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Law of Large Numbers — Simulator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;600;700;800&family=IBM+Plex+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: "Noto Sans Thai","IBM Plex Sans",sans-serif; font-size: 18px; font-weight: 600; background: #f5f5f5; color: #1a1a1a; min-height: 100vh; }
+
+.header { background: #fff; border-bottom: 3px solid #1a1a1a; padding: 16px 32px; display: flex; align-items: center; justify-content: space-between; }
+.header-left { display: flex; align-items: baseline; gap: 14px; }
+.header h1 { font-size: 28px; font-weight: 800; }
+.header span { font-size: 20px; font-weight: 600; color: #555; }
+
+.home-btn { text-decoration: none; color: #6c757d; font-size: 15px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border: 1px solid #dee2e6; border-radius: 6px; background: #fff; transition: all 0.2s; flex-shrink: 0; }
+.home-btn:hover { background: #f8f9fa; color: #0d6efd; }
+
+.lang-toggle { display: flex; border: 2px solid #1a1a1a; border-radius: 8px; overflow: hidden; }
+.lang-btn { font-family: inherit; font-size: 16px; font-weight: 700; padding: 6px 16px; border: none; cursor: pointer; background: #fff; color: #888; transition: all .12s; }
+.lang-btn.active { background: #1a1a1a; color: #fff; }
+
+.main { max-width: 1000px; margin: 24px auto; padding: 0 24px; }
+.card { background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 20px; margin-bottom: 16px; }
+.card-title { font-size: 20px; font-weight: 800; margin-bottom: 14px; border-bottom: 1px solid #eee; padding-bottom: 8px; }
+
+/* Controls */
+.ctrl-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
+.ctrl-label { font-size: 17px; font-weight: 600; }
+select { font-family: inherit; font-size: 17px; font-weight: 700; padding: 6px 12px; border: 1.5px solid #bbb; border-radius: 6px; background: #fff; cursor: pointer; }
+.btn { font-family: inherit; font-size: 17px; font-weight: 800; padding: 8px 20px; border-radius: 6px; border: 1.5px solid #1a1a1a; background: #1a1a1a; color: #fff; cursor: pointer; transition: background .12s; }
+.btn:hover { background: #333; }
+.btn-sec { background: #fff; color: #1a1a1a; }
+.btn-sec:hover { background: #f0f0f0; }
+
+/* Latest Result */
+.latest-result { display: flex; align-items: center; gap: 12px; padding: 12px 16px; background: #e9ecef; border-radius: 8px; font-size: 17px; margin-top: 16px; }
+.result-box { background: #fff; border: 2px solid #1a1a1a; border-radius: 6px; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: 800; }
+
+/* Line Chart Canvas */
+canvas { width: 100%; height: 280px; display: block; border-radius: 4px; background: #fafafa; border: 1px solid #eee; }
+
+/* Stats & Legends */
+.stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-top: 16px; }
+.stat { background: #f7f7f7; border: 1px solid #e0e0e0; border-radius: 6px; padding: 12px; text-align: center; }
+.stat-val { font-size: 26px; font-weight: 800; }
+.stat-lbl { font-size: 14px; font-weight: 600; color: #666; margin-top: 2px; }
+.legend { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 12px; justify-content: center; }
+.legend-item { display: flex; align-items: center; gap: 6px; font-size: 15px; font-weight: 600; color: #555; }
+
+/* Layout for Two Charts */
+.charts-layout { display: grid; grid-template-columns: 1fr; gap: 20px; }
+@media (min-width: 850px) { .charts-layout { grid-template-columns: 3fr 2fr; } }
+
+/* Bar Chart Styles */
+.bar-area { display: flex; align-items: flex-end; gap: 8px; height: 220px; padding-top: 20px; }
+.bar-col { display: flex; flex-direction: column; justify-content: flex-end; align-items: center; flex: 1; position: relative; height: 100%; }
+.pct { font-size: 13px; font-weight: 700; color: #555; margin-bottom: 4px; }
+.bar { width: 100%; background: #1a1a1a; border-radius: 4px 4px 0 0; transition: height 0.2s ease; }
+.theory-mark { position: absolute; left: -2px; right: -2px; border-top: 2px dashed #dc3545; z-index: 2; pointer-events: none; }
+.x-axis { border-top: 2px solid #1a1a1a; margin-top: 0; }
+.bar-labels { display: flex; gap: 8px; margin-top: 6px; }
+.bar-lbl { flex: 1; text-align: center; font-size: 15px; font-weight: 700; color: #444; }
+
+.insight { font-size: 16px; font-weight: 600; color: #333; background: #f8f9fa; border-left: 4px solid #0d6efd; padding: 12px 16px; border-radius: 0 6px 6px 0; margin-top: 16px; line-height: 1.5; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-left">
+    <a href="index.html" class="home-btn" data-th="← หน้าแรก" data-en="← Home">← Home</a>
+    <h1>Law of Large Numbers</h1>
+  </div>
+  <div class="lang-toggle">
+    <button class="lang-btn active" onclick="setLang('th')">TH</button>
+    <button class="lang-btn" onclick="setLang('en')">EN</button>
+  </div>
+</div>
+
+<div class="main">
+  <div class="card">
+    <div class="card-title" data-th="ตั้งค่าการทดลอง" data-en="Experiment Setup">ตั้งค่าการทดลอง</div>
+    <div class="ctrl-row">
+      <span class="ctrl-label" data-th="ประเภทการทดลอง:" data-en="Experiment Type:">ประเภทการทดลอง:</span>
+      <select id="expType" onchange="resetExperiment()">
+        <option value="coin" data-th="โยนเหรียญ (Expected = 0.5)" data-en="Coin Flip (Expected = 0.5)">โยนเหรียญ (Expected = 0.5)</option>
+        <option value="dice" data-th="ทอยลูกเต๋า 1 ลูก (Expected = 3.5)" data-en="Dice Roll (Expected = 3.5)">ทอยลูกเต๋า 1 ลูก (Expected = 3.5)</option>
+      </select>
+    </div>
+    <div class="ctrl-row" style="margin-top: 16px;">
+      <button class="btn" onclick="runExperiment(1)" data-th="สุ่ม 1 ครั้ง" data-en="Draw 1">สุ่ม 1 ครั้ง</button>
+      <button class="btn btn-sec" onclick="runExperiment(10)">+ 10</button>
+      <button class="btn btn-sec" onclick="runExperiment(100)">+ 100</button>
+      <button class="btn btn-sec" onclick="runExperiment(1000)">+ 1,000</button>
+      <button class="btn btn-sec" onclick="resetExperiment()" style="margin-left: auto;" data-th="รีเซ็ต" data-en="Reset">รีเซ็ต</button>
+    </div>
+    
+    <div class="latest-result" id="latestResultArea" style="display: none;">
+      <span data-th="ผลการสุ่มครั้งล่าสุด:" data-en="Latest Result:">ผลการสุ่มครั้งล่าสุด:</span>
+      <div class="result-box" id="latestBox">-</div>
+    </div>
+  </div>
+
+  <div class="charts-layout">
+    <div class="card" style="margin-bottom: 0;">
+      <div class="card-title" data-th="กราฟค่าเฉลี่ยสะสม (Running Average)" data-en="Running Average Chart">กราฟค่าเฉลี่ยสะสม (Running Average)</div>
+      <canvas id="lineChart"></canvas>
+      <div class="legend" style="margin-bottom: 12px;">
+        <div class="legend-item"><div style="width:24px; height:3px; background:#0d6efd;"></div><span data-th="ค่าเฉลี่ยสะสม (x̄)" data-en="Running Avg (x̄)">ค่าเฉลี่ยสะสม (x̄)</span></div>
+        <div class="legend-item"><div style="width:24px; border-top:2px dashed #dc3545;"></div><span data-th="ค่าคาดหมาย (μ)" data-en="Expected Value (μ)">ค่าคาดหมาย (μ)</span></div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-bottom: 0;">
+      <div class="card-title" data-th="การกระจายตัว (Distribution)" data-en="Distribution">การกระจายตัว (Distribution)</div>
+      <div class="bar-area" id="barArea"></div>
+      <div class="x-axis"></div>
+      <div class="bar-labels" id="barLabels"></div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top: 16px;">
+    <div class="stat-grid">
+      <div class="stat"><div class="stat-val" id="sTrials">0</div><div class="stat-lbl" data-th="จำนวนครั้ง (n)" data-en="Trials (n)">จำนวนครั้ง (n)</div></div>
+      <div class="stat"><div class="stat-val" id="sCurrentAvg">0.000</div><div class="stat-lbl" data-th="ค่าเฉลี่ยปัจจุบัน (x̄)" data-en="Current Avg (x̄)">ค่าเฉลี่ยปัจจุบัน (x̄)</div></div>
+      <div class="stat"><div class="stat-val" id="sExpected">0.5</div><div class="stat-lbl" data-th="ค่าคาดหมาย (μ)" data-en="Expected (μ)">ค่าคาดหมาย (μ)</div></div>
+      <div class="stat"><div class="stat-val" id="sError">0.000</div><div class="stat-lbl" data-th="ความคลาดเคลื่อน" data-en="Error / Deviation">ความคลาดเคลื่อน</div></div>
+    </div>
+
+    <div class="insight" id="insight">
+      เลือกประเภทการทดลองแล้วกดปุ่ม "สุ่ม 1 ครั้ง" เพื่อเริ่มต้น
+    </div>
+  </div>
+</div>
+
+<script>
+// Language Control
+var currentLang = 'th';
+
+function t(th, en) {
+  return currentLang === 'en' ? en : th;
+}
+
+function setLang(lang) {
+  currentLang = lang;
+  
+  // Update Buttons
+  document.querySelectorAll('.lang-btn').forEach(function(b) {
+    b.classList.toggle('active', b.textContent.trim().toLowerCase() === lang);
+  });
+  
+  // Update Data Attributes
+  document.querySelectorAll('[data-th]').forEach(function(el) {
+    var val = el.getAttribute('data-' + lang);
+    if (val) el.textContent = val;
+  });
+  
+  // Update Options
+  document.querySelectorAll('select option[data-th]').forEach(function(opt) {
+    var val = opt.getAttribute('data-' + lang);
+    if (val) opt.textContent = val;
+  });
+
+  // Re-render Dynamic Elements
+  updateStats();
+  drawBarChart();
+  
+  // Update Latest Result Text (if active)
+  if (totalTrials > 0 && type === 'coin') {
+    document.getElementById('latestBox').textContent = lastResult === 1 ? t('หัว', 'Heads') : t('ก้อย', 'Tails');
+  }
+}
+
+// State Variables
+let type = 'coin'; 
+let historyAvg = []; 
+let currentSum = 0;
+let totalTrials = 0;
+let counts = {}; 
+let lastResult = 0;
+
+// Configs
+const config = {
+  coin: { expected: 0.5, yMin: 0, yMax: 1, keys: [0, 1], prob: 0.5 },
+  dice: { expected: 3.5, yMin: 1, yMax: 6, keys: [1, 2, 3, 4, 5, 6], prob: 1/6 }
+};
+
+const canvas = document.getElementById('lineChart');
+const ctx = canvas.getContext('2d');
+
+function resizeCanvas() {
+  const W = canvas.parentElement.clientWidth - 40; 
+  const H = 280;
+  canvas.style.width = W + 'px';
+  canvas.style.height = H + 'px';
+  canvas.width = W * window.devicePixelRatio;
+  canvas.height = H * window.devicePixelRatio;
+  ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+  drawLineChart();
+}
+window.addEventListener('resize', resizeCanvas);
+
+function resetExperiment() {
+  type = document.getElementById('expType').value;
+  historyAvg = [];
+  currentSum = 0;
+  totalTrials = 0;
+  counts = {};
+  config[type].keys.forEach(k => counts[k] = 0);
+  
+  document.getElementById('sExpected').textContent = config[type].expected.toFixed(1);
+  document.getElementById('latestResultArea').style.display = 'none';
+  
+  updateStats();
+  drawLineChart();
+  drawBarChart();
+}
+
+function runExperiment(n) {
+  for (let i = 0; i < n; i++) {
+    let result = 0;
+    if (type === 'coin') {
+      result = Math.random() < 0.5 ? 1 : 0; 
+    } else {
+      result = Math.floor(Math.random() * 6) + 1; 
+    }
+    
+    lastResult = result;
+    currentSum += result;
+    counts[result]++;
+    totalTrials++;
+    historyAvg.push(currentSum / totalTrials);
+  }
+  
+  document.getElementById('latestResultArea').style.display = 'flex';
+  let displayRes = lastResult;
+  if (type === 'coin') displayRes = lastResult === 1 ? t('หัว', 'Heads') : t('ก้อย', 'Tails');
+  document.getElementById('latestBox').textContent = displayRes;
+
+  updateStats();
+  drawLineChart();
+  drawBarChart();
+}
+
+function updateStats() {
+  document.getElementById('sTrials').textContent = totalTrials.toLocaleString();
+  
+  const ins = document.getElementById('insight');
+  
+  if (totalTrials === 0) {
+    document.getElementById('sCurrentAvg').textContent = "0.000";
+    document.getElementById('sError').textContent = "0.000";
+    ins.innerHTML = t(`เริ่มต้นใหม่แล้ว! ลองสุ่มจำนวนน้อยๆ ก่อนเพื่อดูกราฟแท่งที่ไม่เท่ากัน (Non-uniform)`,
+                      `Experiment reset! Try drawing a small number of samples first to observe the uneven (non-uniform) bar chart.`);
+    return;
+  }
+  
+  const currentAvg = historyAvg[totalTrials - 1];
+  const expected = config[type].expected;
+  document.getElementById('sCurrentAvg').textContent = currentAvg.toFixed(3);
+  document.getElementById('sError').textContent = Math.abs(currentAvg - expected).toFixed(3);
+  
+  if (totalTrials >= 1000) {
+    ins.innerHTML = t(`สุดยอด! เมื่อ n มีขนาดใหญ่มาก (<b>${totalTrials.toLocaleString()}</b> ครั้ง) จะเห็นว่า 1) ค่าเฉลี่ยเกาะติดเส้นประแดง และ 2) กราฟแท่งกระจายตัวเท่ากันเป็นแนวระนาบ (Uniform Distribution) ตาม Law of Large Numbers`,
+                      `Excellent! When n is very large (<b>${totalTrials.toLocaleString()}</b> trials), you can see that: 1) the average tightly hugs the red dashed line, and 2) the bar chart flattens into a Uniform Distribution. This perfectly demonstrates the Law of Large Numbers.`);
+  } else if (totalTrials >= 100) {
+    ins.innerHTML = t(`ความผันผวนเริ่มลดลง กราฟแท่งเริ่มปรับระดับความสูงให้ใกล้เคียงกันมากขึ้น ลองกดเพิ่มอีกให้ถึง 1,000 ครั้งดูครับ`,
+                      `Volatility is decreasing. The distribution bars are starting to level out. Try adding more trials to reach 1,000.`);
+  } else {
+    ins.innerHTML = t(`สังเกตความผันผวนของเส้นค่าเฉลี่ยในช่วงแรกของการทดลอง และกราฟแท่งที่ยังคงสูงต่ำไม่เท่ากัน`, 
+                      `Observe the high volatility of the running average line and the uneven distribution bars during these early trials.`);
+  }
+}
+
+// Draw Running Average (Line Chart)
+function drawLineChart() {
+  const W = canvas.offsetWidth, H = canvas.offsetHeight;
+  ctx.clearRect(0, 0, W, H);
+  
+  const pad = { top: 20, bottom: 24, left: 40, right: 10 };
+  const cw = W - pad.left - pad.right, ch = H - pad.top - pad.bottom;
+  const cnf = config[type];
+  const maxX = Math.max(20, totalTrials); 
+  
+  const toX = (i) => pad.left + (i / maxX) * cw;
+  const toY = (val) => pad.top + ch - ((val - cnf.yMin) / (cnf.yMax - cnf.yMin)) * ch;
+
+  // Grid & Y-Axis Labels
+  ctx.fillStyle = '#666'; ctx.font = '13px "IBM Plex Sans", sans-serif'; ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+  const steps = type === 'coin' ? 4 : 5; 
+  for (let i = 0; i <= steps; i++) {
+    const val = cnf.yMin + i * ((cnf.yMax - cnf.yMin) / steps);
+    const y = toY(val);
+    ctx.beginPath(); ctx.moveTo(pad.left, y); ctx.lineTo(W - pad.right, y);
+    ctx.strokeStyle = '#eee'; ctx.lineWidth = 1; ctx.stroke();
+    ctx.fillText(val.toFixed(1), pad.left - 8, y);
+  }
+
+  // X-Axis (Base)
+  ctx.beginPath(); ctx.moveTo(pad.left, toY(cnf.yMin)); ctx.lineTo(W - pad.right, toY(cnf.yMin));
+  ctx.strokeStyle = '#999'; ctx.stroke();
+
+  // Theoretical Expected Line (Red Dashed)
+  const yExp = toY(cnf.expected);
+  ctx.beginPath(); ctx.setLineDash([5, 4]); ctx.moveTo(pad.left, yExp); ctx.lineTo(W - pad.right, yExp);
+  ctx.strokeStyle = '#dc3545'; ctx.lineWidth = 2; ctx.stroke(); ctx.setLineDash([]); 
+
+  // Running Average Line (Blue)
+  if (totalTrials > 0) {
+    ctx.beginPath();
+    for (let i = 0; i < totalTrials; i++) {
+      const px = toX(i + 1), py = toY(historyAvg[i]);
+      if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+    }
+    ctx.strokeStyle = '#0d6efd'; ctx.lineWidth = 2; ctx.lineJoin = 'round'; ctx.stroke();
+  }
+}
+
+// Draw Distribution (Bar Chart)
+function drawBarChart() {
+  const area = document.getElementById('barArea');
+  const labels = document.getElementById('barLabels');
+  area.innerHTML = ''; labels.innerHTML = '';
+  
+  const cnf = config[type];
+  const keys = cnf.keys;
+  const thProb = cnf.prob;
+  
+  let maxObs = 0;
+  if (totalTrials > 0) {
+    maxObs = Math.max(...keys.map(k => counts[k] / totalTrials));
+  }
+  const maxH = Math.max(maxObs, thProb, 0.01) * 1.25; 
+
+  keys.forEach(k => {
+    const obsProb = totalTrials > 0 ? counts[k] / totalTrials : 0;
+    const obsPct = (obsProb * 100);
+    const thPct = (thProb / maxH) * 100; 
+    const barHeightPct = (obsProb / maxH) * 100;
+
+    const col = document.createElement('div');
+    col.className = 'bar-col';
+    
+    const pctLbl = document.createElement('div');
+    pctLbl.className = 'pct';
+    pctLbl.textContent = totalTrials > 0 ? obsPct.toFixed(1) + '%' : '';
+    
+    const bar = document.createElement('div');
+    bar.className = 'bar';
+    bar.style.height = barHeightPct + '%';
+    
+    const mark = document.createElement('div');
+    mark.className = 'theory-mark';
+    mark.style.bottom = thPct + '%';
+    
+    col.appendChild(pctLbl);
+    col.appendChild(bar);
+    col.appendChild(mark);
+    area.appendChild(col);
+    
+    const lbl = document.createElement('div');
+    lbl.className = 'bar-lbl';
+    if (type === 'coin') {
+      lbl.textContent = k === 1 ? t('หัว (1)', 'Heads (1)') : t('ก้อย (0)', 'Tails (0)');
+    } else {
+      lbl.textContent = k;
+    }
+    labels.appendChild(lbl);
+  });
+}
+
+// Init
+setTimeout(resizeCanvas, 50); 
+setLang('th'); // Initialize with default language
+resetExperiment();
+</script>
+</body>
+</html>

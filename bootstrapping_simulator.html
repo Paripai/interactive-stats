@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bootstrapping Simulator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;600;700;800&family=IBM+Plex+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: "Noto Sans Thai","IBM Plex Sans",sans-serif; font-size: 18px; font-weight: 600; background: #f5f5f5; color: #1a1a1a; min-height: 100vh; }
+
+.header { background: #fff; border-bottom: 3px solid #1a1a1a; padding: 16px 32px; display: flex; align-items: center; justify-content: space-between; }
+.header-left { display: flex; align-items: baseline; gap: 14px; }
+.header h1 { font-size: 28px; font-weight: 800; }
+.header span { font-size: 20px; font-weight: 600; color: #555; }
+
+.home-btn { text-decoration: none; color: #6c757d; font-size: 15px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border: 1px solid #dee2e6; border-radius: 6px; background: #fff; transition: all 0.2s; flex-shrink: 0; }
+.home-btn:hover { background: #f8f9fa; color: #0d6efd; }
+
+.lang-toggle { display: flex; border: 2px solid #1a1a1a; border-radius: 8px; overflow: hidden; }
+.lang-btn { font-family: inherit; font-size: 16px; font-weight: 700; padding: 6px 16px; border: none; cursor: pointer; background: #fff; color: #888; transition: all .12s; }
+.lang-btn.active { background: #1a1a1a; color: #fff; }
+
+.main { max-width: 1100px; margin: 24px auto; padding: 0 24px; }
+.card { background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 20px; margin-bottom: 16px; }
+.card-title { font-size: 20px; font-weight: 800; margin-bottom: 14px; border-bottom: 1px solid #eee; padding-bottom: 8px; display: flex; justify-content: space-between; align-items: center;}
+
+/* Layout */
+.layout { display: grid; grid-template-columns: 320px 1fr; gap: 20px; }
+@media (max-width: 850px) { .layout { grid-template-columns: 1fr; } }
+
+/* Controls */
+.slider-group { margin-bottom: 16px; }
+.slider-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px; }
+.slider-name { font-size: 15px; font-weight: 700; }
+.slider-val { font-size: 22px; font-weight: 800; color: #0d6efd; }
+input[type=range] { width: 100%; accent-color: #0d6efd; cursor: pointer; }
+.slider-ticks { display: flex; justify-content: space-between; font-size: 13px; font-weight: 600; color: #999; margin-top: 2px; }
+
+select { font-family: inherit; font-size: 16px; font-weight: 700; padding: 8px 12px; border: 1.5px solid #bbb; border-radius: 6px; background: #fff; width: 100%; cursor: pointer; margin-bottom: 16px; }
+
+.btn { font-family: inherit; font-size: 16px; font-weight: 700; padding: 10px 16px; border-radius: 6px; border: 1.5px solid #1a1a1a; background: #1a1a1a; color: #fff; cursor: pointer; transition: background .12s; width: 100%; margin-bottom: 8px; text-align: center; }
+.btn:hover { background: #333; }
+.btn-sec { background: #fff; color: #1a1a1a; }
+.btn-sec:hover { background: #f0f0f0; }
+.btn-danger { background: #fff5f5; border-color: #ff6b6b; color: #e03131; }
+.btn-danger:hover { background: #ffe3e3; }
+
+/* Canvas */
+canvas { width: 100%; display: block; border-radius: 4px; background: #fdfdfd; border: 1px solid #eee; }
+
+/* Stats & Legends */
+.stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 16px; }
+.stat { background: #f8f9fa; border: 1px solid #e0e0e0; border-radius: 6px; padding: 12px; text-align: center; }
+.stat-val { font-size: 22px; font-weight: 800; font-family: "IBM Plex Sans", sans-serif; }
+.stat-lbl { font-size: 13px; font-weight: 600; color: #555; margin-top: 2px; line-height: 1.2; }
+
+.legend { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 8px; justify-content: center; }
+.legend-item { display: flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 600; color: #555; }
+.legend-color { width: 14px; height: 14px; border-radius: 3px; }
+
+.insight { font-size: 16px; font-weight: 600; color: #333; background: #e6fcf5; border-left: 4px solid #20c997; padding: 12px 16px; border-radius: 0 6px 6px 0; margin-top: 16px; line-height: 1.5; }
+
+.questions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.q-chip { font-size: 15px; font-weight: 600; padding: 6px 14px; border: 1px solid #bbb; border-radius: 20px; color: #444; background: #fafafa; line-height: 1.4; }
+
+.badge { display: inline-block; padding: 4px 8px; border-radius: 4px; font-size: 13px; font-weight: 700; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-left">
+    <a href="index.html" class="home-btn" data-th="← หน้าแรก" data-en="← Home">← Home</a>
+    <h1>Bootstrapping Simulator</h1>
+  </div>
+  <div class="lang-toggle">
+    <button class="lang-btn active" onclick="setLang('th')">TH</button>
+    <button class="lang-btn" onclick="setLang('en')">EN</button>
+  </div>
+</div>
+
+<div class="main">
+  <div class="layout">
+    
+    <div>
+      <div class="card">
+        <div class="card-title" data-th="1. ข้อมูลตั้งต้น (Original Data)" data-en="1. Original Data">1. ข้อมูลตั้งต้น (Original Data)</div>
+        
+        <span class="slider-name" data-th="รูปแบบประชากร" data-en="Population Shape">รูปแบบประชากร</span>
+        <select id="popShape" style="margin-top: 6px;">
+          <option value="skew" data-th="เบ้ขวา (Right-skewed)" data-en="Right-skewed">เบ้ขวา (Right-skewed)</option>
+          <option value="normal" data-th="ปกติ (Normal)" data-en="Normal">ปกติ (Normal)</option>
+          <option value="uniform" data-th="สม่ำเสมอ (Uniform)" data-en="Uniform">สม่ำเสมอ (Uniform)</option>
+        </select>
+
+        <div class="slider-group">
+          <div class="slider-header">
+            <span class="slider-name" data-th="ขนาดตัวอย่าง (n)" data-en="Sample Size (n)">ขนาดตัวอย่าง (n)</span>
+            <span class="slider-val" id="nVal">15</span>
+          </div>
+          <input type="range" id="nSlider" min="5" max="50" value="15" step="1" oninput="updateN()">
+          <div class="slider-ticks"><span>5</span><span>50</span></div>
+        </div>
+
+        <button class="btn" style="background: #0d6efd; border-color: #0d6efd;" onclick="drawOriginalSample()" data-th="สุ่มข้อมูลตั้งต้นใหม่" data-en="Draw New Original Sample">สุ่มข้อมูลตั้งต้นใหม่</button>
+
+        <hr style="border: 0; border-top: 1px solid #eee; margin: 16px 0;">
+
+        <div class="card-title" data-th="2. การสุ่มแบบใส่คืน" data-en="2. Resampling">2. การสุ่มแบบใส่คืน</div>
+        <div style="font-size: 14px; color: #555; margin-bottom: 12px; line-height: 1.5;" data-th="หยิบข้อมูล n ตัว จากข้อมูลตั้งต้น (หยิบซ้ำได้) เพื่อสร้างตัวอย่างชุดใหม่" data-en="Draw n items from the Original Data (with replacement) to build a new sample.">หยิบข้อมูล n ตัว จากข้อมูลตั้งต้น (หยิบซ้ำได้) เพื่อสร้างตัวอย่างชุดใหม่</div>
+
+        <button class="btn btn-sec" onclick="resample(1)" data-th="สุ่มใหม่ 1 ครั้ง (Resample 1x)" data-en="Resample 1x">สุ่มใหม่ 1 ครั้ง (Resample 1x)</button>
+        <button class="btn btn-sec" onclick="resample(100)">+ 100</button>
+        <button class="btn btn-sec" onclick="resample(1000)">+ 1,000</button>
+        <button class="btn btn-danger" onclick="clearResamples()" style="margin-top: 8px;" data-th="ล้างผล Resample" data-en="Clear Resamples">ล้างผล Resample</button>
+      </div>
+
+      <div class="card">
+        <div class="card-title" data-th="คำถามชวนคิด" data-en="Discussion Questions">คำถามชวนคิด</div>
+        <div class="questions">
+          <div class="q-chip" data-th="ทำไมต้อง 'สุ่มแบบใส่คืน (With Replacement)'?" data-en="Why must we sample 'With Replacement'?">ทำไมต้อง 'สุ่มแบบใส่คืน (With Replacement)'?</div>
+          <div class="q-chip" data-th="ข้อมูลตั้งต้นเบ้มาก แต่กราฟ Bootstrap กลับเป็นรูประฆังคว่ำ เพราะอะไร?" data-en="Original data is skewed, but Bootstrap distribution is bell-shaped. Why?">ข้อมูลตั้งต้นเบ้มาก แต่กราฟ Bootstrap กลับเป็นรูประฆังคว่ำ เพราะอะไร?</div>
+          <div class="q-chip" data-th="ข้อดีของการไม่ใช้สูตรคณิตศาสตร์คืออะไร?" data-en="What is the advantage of not using math formulas here?">ข้อดีของการไม่ใช้สูตรคณิตศาสตร์คืออะไร?</div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      
+      <div class="card" style="margin-bottom: 16px;">
+        <div class="card-title">
+          <span data-th="กลุ่มตัวอย่างตั้งต้น (Original Sample)" data-en="Original Sample">กลุ่มตัวอย่างตั้งต้น (Original Sample)</span>
+          <span class="badge" style="background:#e7f1ff; color:#0d6efd;" id="badgeOrigMean">Mean = 0.00</span>
+        </div>
+        <canvas id="cvsOrig" height="120"></canvas>
+        <div style="font-size: 14px; color: #888; text-align: center; margin-top: 6px;" id="origList"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title" data-th="การแจกแจงของค่าเฉลี่ย (Bootstrap Distribution)" data-en="Bootstrap Distribution of the Mean">การแจกแจงของค่าเฉลี่ย (Bootstrap Distribution)</div>
+        <canvas id="cvsBoot" height="250"></canvas>
+        
+        <div class="legend">
+          <div class="legend-item"><div class="legend-color" style="background:#1a1a1a;"></div><span data-th="ค่าเฉลี่ยที่สุ่มได้ใหม่" data-en="Resampled Means">ค่าเฉลี่ยที่สุ่มได้ใหม่</span></div>
+          <div class="legend-item"><div style="width:20px; border-top:2px dashed #20c997;"></div><span data-th="ขอบเขต 95% CI" data-en="95% CI Bounds">ขอบเขต 95% CI</span></div>
+        </div>
+
+        <div class="stat-grid">
+          <div class="stat"><div class="stat-val" id="sRounds">0</div><div class="stat-lbl" data-th="จำนวนรอบที่สุ่ม" data-en="Resamples">จำนวนรอบที่สุ่ม</div></div>
+          <div class="stat" style="border-bottom: 3px solid #1a1a1a;"><div class="stat-val" id="sBootMean">&#8212;</div><div class="stat-lbl" data-th="Mean ของ x̄" data-en="Mean of Means">Mean ของ x̄</div></div>
+          <div class="stat"><div class="stat-val" id="sBootSE">&#8212;</div><div class="stat-lbl" data-th="SE (SD ของ x̄)" data-en="SE (SD of Means)">SE (SD ของ x̄)</div></div>
+          <div class="stat" style="border-bottom: 3px solid #20c997;"><div class="stat-val" style="color:#20c997;" id="sCI">&#8212;</div><div class="stat-lbl" data-th="95% CI" data-en="95% CI">95% CI</div></div>
+        </div>
+
+        <div class="insight" id="insight"></div>
+      </div>
+    </div>
+    
+  </div>
+</div>
+
+<script>
+// --- Language System ---
+var currentLang = 'th';
+function t(th, en) { return currentLang === 'en' ? en : th; }
+function setLang(lang) {
+  currentLang = lang;
+  document.querySelectorAll('.lang-btn').forEach(b => b.classList.toggle('active', b.textContent.trim().toLowerCase() === lang));
+  document.querySelectorAll('[data-th]').forEach(el => {
+    var val = el.getAttribute('data-' + lang);
+    if (val) el.innerHTML = val;
+  });
+  document.querySelectorAll('select option[data-th]').forEach(opt => {
+    var val = opt.getAttribute('data-' + lang);
+    if (val) opt.textContent = val;
+  });
+  updateUI();
+  drawOrig();
+  drawBoot();
+}
+
+// --- State Variables ---
+let originalData = [];
+let origMean = 0;
+let bootstrapMeans = [];
+let nSize = 15;
+
+const MIN_VAL = 0;
+const MAX_VAL = 20;
+
+// --- DOM Elements ---
+const cvsOrig = document.getElementById('cvsOrig');
+const ctxOrig = cvsOrig.getContext('2d');
+const cvsBoot = document.getElementById('cvsBoot');
+const ctxBoot = cvsBoot.getContext('2d');
+
+// --- Helpers ---
+function randNorm(mu=10, sd=3) {
+  let u=0, v=0;
+  while(!u) u = Math.random();
+  while(!v) v = Math.random();
+  return mu + sd * Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v);
+}
+
+function randSkew() {
+  return -Math.log(1 - Math.random()) * 4; // Exponential
+}
+
+function mean(arr) { return arr.reduce((a, b) => a + b, 0) / arr.length; }
+function std(arr, m) { return Math.sqrt(arr.reduce((a, b) => a + Math.pow(b - m, 2), 0) / arr.length); }
+
+function updateN() {
+  nSize = parseInt(document.getElementById('nSlider').value);
+  document.getElementById('nVal').textContent = nSize;
+}
+
+// --- Core Logic ---
+function drawOriginalSample() {
+  const shape = document.getElementById('popShape').value;
+  originalData = [];
+  
+  for (let i = 0; i < nSize; i++) {
+    let val = 0;
+    if (shape === 'skew') val = randSkew() + 1;
+    else if (shape === 'normal') val = randNorm(10, 3);
+    else if (shape === 'uniform') val = Math.random() * 16 + 2;
+    
+    // Constrain for visual purposes
+    val = Math.max(MIN_VAL + 0.5, Math.min(MAX_VAL - 0.5, val));
+    originalData.push(val);
+  }
+  
+  originalData.sort((a,b) => a-b);
+  origMean = mean(originalData);
+  
+  document.getElementById('badgeOrigMean').textContent = `Mean = ${origMean.toFixed(2)}`;
+  
+  // Format list for UI
+  const listStr = originalData.map(v => v.toFixed(1)).join(', ');
+  document.getElementById('origList').textContent = `[ ${listStr} ]`;
+  
+  clearResamples();
+  drawOrig();
+}
+
+function resample(times) {
+  if (originalData.length === 0) drawOriginalSample();
+  
+  for (let i = 0; i < times; i++) {
+    let sample = [];
+    for (let j = 0; j < nSize; j++) {
+      // Pick random index WITH REPLACEMENT
+      let randIdx = Math.floor(Math.random() * nSize);
+      sample.push(originalData[randIdx]);
+    }
+    bootstrapMeans.push(mean(sample));
+  }
+  
+  updateUI();
+  drawBoot();
+}
+
+function clearResamples() {
+  bootstrapMeans = [];
+  updateUI();
+  drawBoot();
+}
+
+// --- Canvas Drawing ---
+function resizeCanvas(canvas, ctx, height) {
+  const W = canvas.parentElement.clientWidth - 40;
+  canvas.style.width = W + 'px';
+  canvas.style.height = height + 'px';
+  canvas.width = W * window.devicePixelRatio;
+  canvas.height = height * window.devicePixelRatio;
+  ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+  return { W, H: height };
+}
+
+function drawOrig() {
+  if (!originalData.length) return;
+  const { W, H } = resizeCanvas(cvsOrig, ctxOrig, 120);
+  ctxOrig.clearRect(0, 0, W, H);
+  
+  const pad = { left: 20, right: 20, bottom: 25 };
+  const cw = W - pad.left - pad.right;
+  const toX = (v) => pad.left + (v / MAX_VAL) * cw;
+  const baseY = H - pad.bottom;
+  
+  // X-Axis
+  ctxOrig.strokeStyle = '#ccc'; ctxOrig.lineWidth = 2;
+  ctxOrig.beginPath(); ctxOrig.moveTo(pad.left, baseY); ctxOrig.lineTo(W - pad.right, baseY); ctxOrig.stroke();
+  
+  // Ticks
+  ctxOrig.fillStyle = '#888'; ctxOrig.font = '12px "IBM Plex Sans", sans-serif'; ctxOrig.textAlign = 'center';
+  for (let i = 0; i <= MAX_VAL; i += 5) {
+    ctxOrig.fillText(i, toX(i), baseY + 18);
+  }
+  
+  // Dots (Stacking logic)
+  const binWidth = (MAX_VAL / cw) * 12; // visual binning for stacking
+  let bins = {};
+  
+  originalData.forEach(val => {
+    let b = Math.floor(val / binWidth);
+    if (!bins[b]) bins[b] = 0;
+    
+    let x = toX(val);
+    let y = baseY - 8 - (bins[b] * 12);
+    
+    ctxOrig.beginPath();
+    ctxOrig.arc(x, y, 5, 0, Math.PI * 2);
+    ctxOrig.fillStyle = '#0d6efd';
+    ctxOrig.fill();
+    ctxOrig.strokeStyle = '#fff'; ctxOrig.lineWidth = 1; ctxOrig.stroke();
+    
+    bins[b]++;
+  });
+  
+  // Original Mean Marker
+  ctxOrig.beginPath();
+  ctxOrig.moveTo(toX(origMean), baseY + 5);
+  ctxOrig.lineTo(toX(origMean) - 6, baseY + 12);
+  ctxOrig.lineTo(toX(origMean) + 6, baseY + 12);
+  ctxOrig.closePath();
+  ctxOrig.fillStyle = '#dc3545'; ctxOrig.fill();
+}
+
+function drawBoot() {
+  const { W, H } = resizeCanvas(cvsBoot, ctxBoot, 250);
+  ctxBoot.clearRect(0, 0, W, H);
+  
+  const pad = { left: 20, right: 20, bottom: 25, top: 20 };
+  const cw = W - pad.left - pad.right;
+  const ch = H - pad.top - pad.bottom;
+  const toX = (v) => pad.left + (v / MAX_VAL) * cw;
+  const baseY = H - pad.bottom;
+  
+  // X-Axis
+  ctxBoot.strokeStyle = '#ccc'; ctxBoot.lineWidth = 2;
+  ctxBoot.beginPath(); ctxBoot.moveTo(pad.left, baseY); ctxBoot.lineTo(W - pad.right, baseY); ctxBoot.stroke();
+  
+  // Ticks
+  ctxBoot.fillStyle = '#888'; ctxBoot.font = '12px "IBM Plex Sans", sans-serif'; ctxBoot.textAlign = 'center';
+  for (let i = 0; i <= MAX_VAL; i += 5) {
+    ctxBoot.fillText(i, toX(i), baseY + 18);
+  }
+  
+  if (bootstrapMeans.length === 0) return;
+  
+  // Histogram logic
+  const bins = 40;
+  const binWidth = MAX_VAL / bins;
+  let counts = Array(bins).fill(0);
+  
+  bootstrapMeans.forEach(m => {
+    let b = Math.floor(m / binWidth);
+    if (b >= bins) b = bins - 1;
+    if (b < 0) b = 0;
+    counts[b]++;
+  });
+  
+  const maxC = Math.max(...counts, 1);
+  const pxPerBin = cw / bins;
+  
+  // Calculate CI bounds
+  const sorted = [...bootstrapMeans].sort((a,b) => a-b);
+  const lowerIdx = Math.floor(sorted.length * 0.025);
+  const upperIdx = Math.floor(sorted.length * 0.975);
+  const lowerCI = sorted[lowerIdx] || 0;
+  const upperCI = sorted[upperIdx] || 0;
+  
+  // Draw Bars
+  counts.forEach((c, i) => {
+    if (c === 0) return;
+    const x = pad.left + i * pxPerBin;
+    const barH = (c / maxC) * ch * 0.9;
+    const y = baseY - barH;
+    
+    const binCenter = (i + 0.5) * binWidth;
+    const inCI = (binCenter >= lowerCI && binCenter <= upperCI);
+    
+    ctxBoot.fillStyle = inCI ? '#1a1a1a' : '#adb5bd'; // Dark inside CI, gray outside
+    ctxBoot.fillRect(x + 1, y, pxPerBin - 2, barH);
+  });
+  
+  // Draw CI Lines
+  if (bootstrapMeans.length >= 40) {
+    ctxBoot.beginPath(); ctxBoot.setLineDash([5, 4]); ctxBoot.lineWidth = 2; ctxBoot.strokeStyle = '#20c997';
+    ctxBoot.moveTo(toX(lowerCI), pad.top); ctxBoot.lineTo(toX(lowerCI), baseY);
+    ctxBoot.moveTo(toX(upperCI), pad.top); ctxBoot.lineTo(toX(upperCI), baseY);
+    ctxBoot.stroke(); ctxBoot.setLineDash([]);
+  }
+}
+
+function updateUI() {
+  const r = bootstrapMeans.length;
+  document.getElementById('sRounds').textContent = r.toLocaleString();
+  
+  const ins = document.getElementById('insight');
+  
+  if (r === 0) {
+    document.getElementById('sBootMean').innerHTML = '&#8212;';
+    document.getElementById('sBootSE').innerHTML = '&#8212;';
+    document.getElementById('sCI').innerHTML = '&#8212;';
+    ins.className = 'insight';
+    ins.style.borderLeftColor = '#1a1a1a';
+    ins.style.background = '#f8f9fa';
+    ins.innerHTML = t(`กดปุ่ม <b>สุ่มใหม่ (Resample)</b> เพื่อเริ่มสร้างค่าเฉลี่ยใหม่ทีละตัวจากการสุ่มแบบใส่คืน`, `Click <b>Resample</b> to start generating new means one by one using sampling with replacement.`);
+    return;
+  }
+  
+  const bMean = mean(bootstrapMeans);
+  const bSE = std(bootstrapMeans, bMean);
+  
+  document.getElementById('sBootMean').textContent = bMean.toFixed(2);
+  document.getElementById('sBootSE').textContent = bSE.toFixed(3);
+  
+  if (r >= 40) {
+    const sorted = [...bootstrapMeans].sort((a,b) => a-b);
+    const lowerCI = sorted[Math.floor(r * 0.025)];
+    const upperCI = sorted[Math.floor(r * 0.975)];
+    document.getElementById('sCI').textContent = `[${lowerCI.toFixed(1)}, ${upperCI.toFixed(1)}]`;
+    
+    ins.className = 'insight';
+    ins.style.borderLeftColor = '#20c997';
+    ins.style.background = '#e6fcf5';
+    
+    if (r >= 1000) {
+      ins.innerHTML = t(
+        `<b>ง่ายและทรงพลัง:</b> แทนที่จะใช้สูตรคณิตศาสตร์ เราใช้คอมพิวเตอร์สร้างข้อมูลจำลองขึ้นมา 1,000 ชุด แล้วตัดหางซ้าย-ขวาออกฝั่งละ 2.5% สิ่งที่เหลืออยู่ตรงกลางคือ <b>ช่วงความเชื่อมั่น 95% (95% CI)</b> ที่นำไปอ้างอิงได้เลย!`,
+        `<b>Simple and Powerful:</b> Instead of complex formulas, we simulated 1,000 resamples and chopped off the bottom and top 2.5%. The remaining middle area is our empirical <b>95% Confidence Interval</b>!`
+      );
+    } else {
+      ins.innerHTML = t(`กราฟเริ่มก่อตัวเป็นรูประฆังตามกฎ CLT ลองสุ่มเพิ่มให้ถึง 1,000 ครั้งเพื่อให้ขอบเขต 95% CI (เส้นสีเขียว) นิ่งขึ้น`, `The distribution is forming a bell shape via CLT. Try adding more up to 1,000 to stabilize the 95% CI bounds (green lines).`);
+    }
+    
+  } else {
+    document.getElementById('sCI').innerHTML = '&#8212;';
+    ins.innerHTML = t(`ได้ ${r} ค่าแล้ว ควรสุ่มอย่างน้อย 100 - 1,000 ครั้งเพื่อคำนวณช่วงความเชื่อมั่น (95% CI)`, `Collected ${r} means. We need at least 100 - 1,000 resamples to accurately cut off the percentiles for a 95% CI.`);
+  }
+}
+
+// --- Initialize ---
+window.addEventListener('resize', () => { drawOrig(); drawBoot(); });
+setLang('th');
+drawOriginalSample();
+</script>
+</body>
+</html>

@@ -1,0 +1,866 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sampling Techniques Simulator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;600;700;800&family=IBM+Plex+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: "Noto Sans Thai","IBM Plex Sans",sans-serif; font-size: 19px; font-weight: 600; background: #f5f5f5; color: #1a1a1a; min-height: 100vh; }
+
+.header { background: #fff; border-bottom: 3px solid #1a1a1a; padding: 16px 32px; display: flex; align-items: center; justify-content: space-between; }
+.header-left { display: flex; align-items: baseline; gap: 14px; }
+.header h1 { font-size: 32px; font-weight: 800; }
+.header span { font-size: 20px; font-weight: 600; color: #555; }
+
+.lang-toggle { display: flex; border: 2px solid #1a1a1a; border-radius: 8px; overflow: hidden; }
+.lang-btn { font-family: inherit; font-size: 17px; font-weight: 700; padding: 7px 18px; border: none; cursor: pointer; background: #fff; color: #888; transition: all .12s; }
+.lang-btn.active { background: #1a1a1a; color: #fff; }
+
+.main { max-width: 1200px; margin: 24px auto; padding: 0 24px; }
+
+/* Tab bar */
+.tab-bar { display: flex; gap: 0; border-bottom: 2px solid #1a1a1a; margin-bottom: 20px; flex-wrap: wrap; }
+.tab-group-label { font-size: 13px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: #fff; background: #1a1a1a; padding: 6px 14px; align-self: flex-end; border-radius: 6px 6px 0 0; margin-right: 2px; }
+.tab { font-family: inherit; font-size: 17px; font-weight: 700; padding: 9px 18px; border-radius: 6px 6px 0 0; background: #e8e8e8; color: #555; cursor: pointer; border: 1px solid #ccc; border-bottom: none; margin-right: 3px; transition: all .12s; }
+.tab:hover { background: #ddd; color: #222; }
+.tab.active { background: #fff; color: #1a1a1a; font-weight: 800; border-color: #bbb; }
+.tab-section { display: none; }
+.tab-section.active { display: block; }
+
+/* 3-zone layout:
+   row 1: description card (full width)
+   row 2: viz (left, big) + controls (right, narrow)  */
+.layout { display: flex; flex-direction: column; gap: 16px; }
+.bottom-row { display: grid; grid-template-columns: 1fr 300px; gap: 16px; align-items: start; }
+
+.card { background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 20px; }
+.card-title { font-size: 22px; font-weight: 800; margin-bottom: 12px; border-bottom: 1px solid #eee; padding-bottom: 8px; }
+
+/* Description card — horizontal layout inside */
+.desc-inner { display: grid; grid-template-columns: auto 1fr 1fr; gap: 20px; align-items: start; }
+.desc-main { min-width: 260px; }
+.method-badge { display: inline-block; font-size: 13px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; padding: 3px 10px; border-radius: 4px; margin-bottom: 8px; }
+.badge-prob { background: #1a1a1a; color: #fff; }
+.badge-nonprob { background: #e0e0e0; color: #555; border: 1px solid #bbb; }
+.desc-name { font-size: 20px; font-weight: 800; line-height: 1.3; margin-bottom: 6px; }
+.desc-sub { font-size: 16px; font-weight: 600; color: #666; margin-bottom: 8px; }
+.method-desc { font-size: 16px; font-weight: 600; color: #333; line-height: 1.6; }
+.method-steps { font-size: 15px; font-weight: 600; color: #444; line-height: 1.75; padding-left: 18px; }
+.method-steps li { margin-bottom: 3px; }
+.pros { background: #f0faf0; border: 1px solid #b8ddb8; border-radius: 6px; padding: 10px 12px; }
+.cons { background: #fdf5f0; border: 1px solid #e8c4a8; border-radius: 6px; padding: 10px 12px; }
+.pros-title { font-size: 14px; font-weight: 800; color: #2a6b2a; margin-bottom: 6px; }
+.cons-title { font-size: 14px; font-weight: 800; color: #8b4513; margin-bottom: 6px; }
+.pros li, .cons li { font-size: 15px; font-weight: 600; line-height: 1.65; color: #444; padding-left: 12px; }
+.divider { width: 1px; background: #eee; align-self: stretch; }
+
+/* Param controls */
+.param-row { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+.param-label { font-size: 16px; font-weight: 700; min-width: 90px; flex: 0 0 auto; }
+.param-val { font-size: 22px; font-weight: 800; min-width: 36px; text-align: right; }
+input[type=range] { accent-color: #1a1a1a; cursor: pointer; flex: 1; }
+select { font-family: inherit; font-size: 16px; font-weight: 700; padding: 5px 10px; border: 1.5px solid #bbb; border-radius: 6px; background: #fff; width: 100%; margin-top: 4px; }
+
+/* Buttons */
+.btn { font-family: inherit; font-size: 17px; font-weight: 800; padding: 9px 22px; border-radius: 6px; border: 1.5px solid #1a1a1a; background: #1a1a1a; color: #fff; cursor: pointer; transition: background .12s; width: 100%; margin-top: 6px; }
+.btn:hover { background: #333; }
+
+/* Canvas */
+canvas { display: block; border-radius: 6px; width: 100%; }
+
+/* Legend */
+.legend { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 10px; }
+.legend-item { display: flex; align-items: center; gap: 6px; font-size: 15px; font-weight: 600; color: #555; }
+.dot { width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0; }
+
+/* Stats */
+.stat-row { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; margin-top: 12px; }
+.stat { background: #f7f7f7; border: 1px solid #e0e0e0; border-radius: 6px; padding: 8px; text-align: center; }
+.stat-val { font-size: 26px; font-weight: 800; }
+.stat-lbl { font-size: 13px; font-weight: 600; color: #666; margin-top: 2px; }
+
+/* Insight */
+.insight { font-size: 17px; font-weight: 600; color: #333; background: #f7f7f7; border-left: 4px solid #1a1a1a; padding: 10px 14px; border-radius: 0 6px 6px 0; margin-top: 12px; min-height: 44px; }
+
+/* Questions */
+.q-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
+.q-chip { font-size: 16px; font-weight: 600; padding: 6px 14px; border: 1px solid #bbb; border-radius: 20px; color: #444; background: #fafafa; }
+
+/* kinfo */
+.kinfo { font-size: 16px; font-weight: 700; margin-bottom: 10px; color: #555; }
+
+/* Stratum legend */
+.stratum-legend { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 8px; }
+.stratum-box { display: flex; align-items: center; gap: 5px; font-size: 15px; font-weight: 600; }
+.sbox { width: 16px; height: 16px; border-radius: 3px; flex-shrink: 0; }
+
+/* Overview table */
+.overview-table { width: 100%; border-collapse: collapse; font-size: 16px; }
+.overview-table th { background: #1a1a1a; color: #fff; padding: 11px 13px; text-align: left; font-weight: 800; }
+.overview-table td { padding: 10px 13px; border-bottom: 1px solid #eee; vertical-align: top; font-weight: 600; }
+.overview-table tr:hover td { background: #fafafa; }
+.type-prob { color: #1a1a1a; font-weight: 800; }
+.type-nonprob { color: #888; font-weight: 800; }
+.tag { display: inline-block; font-size: 13px; font-weight: 700; padding: 2px 9px; border-radius: 3px; }
+.tag-green { background: #e6f4ea; color: #2a6b2a; }
+.tag-yellow { background: #fff8e1; color: #7a5c00; }
+.tag-red { background: #fdecea; color: #8b1a1a; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-left">
+    <a href="index.html" style="text-decoration: none; color: #6c757d; font-size: 16px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; margin-right: 12px; padding: 6px 12px; border: 1px solid #dee2e6; border-radius: 6px; background: #fff; transition: all 0.2s;" onmouseover="this.style.background='#f8f9fa'; this.style.color='#0d6efd';" onmouseout="this.style.background='#fff'; this.style.color='#6c757d';">
+    ← Home
+  </a>
+    <h1 data-th="วิธีการสุ่มตัวอย่าง" data-en="Sampling Methods">วิธีการสุ่มตัวอย่าง</h1>
+  </div>
+  <div class="lang-toggle">
+    <button class="lang-btn active" onclick="setLang('th')">TH</button>
+    <button class="lang-btn" onclick="setLang('en')">EN</button>
+  </div>
+  
+</div>
+
+<div class="main">
+  <div class="tab-bar">
+    <span class="tab-group-label" data-th="อาศัย P" data-en="Probability">อาศัย P</span>
+    <button class="tab active" onclick="switchTab('simple',this)">Simple Random</button>
+    <button class="tab" onclick="switchTab('systematic',this)">Systematic</button>
+    <button class="tab" onclick="switchTab('stratified',this)">Stratified</button>
+    <button class="tab" onclick="switchTab('cluster',this)">Cluster</button>
+  </div>
+  
+  <div class="tab-bar">
+    <span class="tab-group-label" style="margin-left:10px" data-th="ไม่อาศัย P" data-en="Non-Probability">ไม่อาศัย P</span>
+    <button class="tab" onclick="switchTab('convenience',this)">Convenience</button>
+    <button class="tab" onclick="switchTab('purposive',this)">Purposive</button>
+    <button class="tab" onclick="switchTab('quota',this)">Quota</button>
+    <button class="tab" onclick="switchTab('snowball',this)">Snowball</button>
+    <button class="tab" onclick="switchTab('overview',this)" style="margin-left:10px;background:#fff8dc;border-color:#d4c050;color:#5a4a00" data-th="ภาพรวม" data-en="Overview">ภาพรวม</button>
+  </div>
+
+  <!-- ===== SIMPLE RANDOM ===== -->
+  <div id="tab-simple" class="tab-section active">
+    <div class="layout">
+      <!-- ROW 1: description full width -->
+      <div class="card">
+        <div class="desc-inner">
+          <div class="desc-main">
+            <span class="method-badge badge-prob" data-th="อาศัยความน่าจะเป็น" data-en="Probability Sampling">อาศัยความน่าจะเป็น</span>
+            <div class="desc-name">Simple Random Sampling</div>
+            <div class="desc-sub" data-th="การสุ่มตัวอย่างแบบง่าย" data-en="Equal chance for every unit">การสุ่มตัวอย่างแบบง่าย</div>
+            <p class="method-desc" data-th="ทุกหน่วยมีโอกาสถูกเลือกเท่ากัน ใช้ตารางเลขสุ่มหรือโปรแกรม" data-en="Every unit has an equal chance of selection, using random number tables or software.">ทุกหน่วยมีโอกาสถูกเลือกเท่ากัน ใช้ตารางเลขสุ่มหรือโปรแกรม</p>
+          </div>
+          <div>
+            <div class="card-title" style="font-size:16px" data-th="ขั้นตอน" data-en="Steps">ขั้นตอน</div>
+            <ol class="method-steps">
+              <li data-th="กำหนดกรอบตัวอย่าง" data-en="Define the sampling frame">กำหนดกรอบตัวอย่าง</li>
+              <li data-th="กำหนดหมายเลขให้ทุกหน่วย" data-en="Number every unit">กำหนดหมายเลขให้ทุกหน่วย</li>
+              <li data-th="สุ่มหมายเลขจนครบ n" data-en="Draw numbers until n is reached">สุ่มหมายเลขจนครบ n</li>
+            </ol>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+            <div class="pros"><div class="pros-title" data-th="✓ ข้อดี" data-en="✓ Pros">✓ ข้อดี</div><ul>
+              <li data-th="ไม่มี bias" data-en="No selection bias">ไม่มี bias</li>
+              <li data-th="คำนวณ error ได้" data-en="Error calculable">คำนวณ error ได้</li>
+            </ul></div>
+            <div class="cons"><div class="cons-title" data-th="✗ ข้อจำกัด" data-en="✗ Cons">✗ ข้อจำกัด</div><ul>
+              <li data-th="ต้องมี sampling frame" data-en="Needs complete frame">ต้องมี sampling frame</li>
+              <li data-th="ค่าใช้จ่ายสูงถ้า pop. กระจาย" data-en="Costly if pop. dispersed">ค่าใช้จ่ายสูงถ้า pop. กระจาย</li>
+            </ul></div>
+          </div>
+        </div>
+      </div>
+      <!-- ROW 2: viz + controls -->
+      <div class="bottom-row">
+        <div class="card">
+          <div class="card-title" data-th="ภาพจำลอง" data-en="Visualization">ภาพจำลอง</div>
+          <canvas id="cvs-simple" height="320"></canvas>
+          <div class="legend">
+            <div class="legend-item"><div class="dot" style="background:#ccc;border:1px solid #aaa"></div><span data-th="หน่วยใน population" data-en="Population unit">หน่วยใน population</span></div>
+            <div class="legend-item"><div class="dot" style="background:#1a1a1a"></div><span data-th="ถูกเลือก" data-en="Selected">ถูกเลือก</span></div>
+          </div>
+          <div class="stat-row">
+            <div class="stat"><div class="stat-val" id="sr-s1">—</div><div class="stat-lbl" data-th="N (ประชากร)" data-en="N (Population)">N (ประชากร)</div></div>
+            <div class="stat"><div class="stat-val" id="sr-s2">—</div><div class="stat-lbl" data-th="n (ตัวอย่าง)" data-en="n (Sample)">n (ตัวอย่าง)</div></div>
+            <div class="stat"><div class="stat-val" id="sr-s3">—</div><div class="stat-lbl">Sampling Ratio</div></div>
+          </div>
+          <div class="insight" id="sr-insight"></div>
+        </div>
+        <div class="card">
+          <div class="card-title" data-th="ตั้งค่า" data-en="Parameters">ตั้งค่า</div>
+          <div class="param-row"><span class="param-label" data-th="ประชากร N" data-en="Population N">ประชากร N</span><input type="range" id="sr-N" min="20" max="120" value="60" step="5" oninput="updateSR()"><span class="param-val" id="sr-Nv">60</span></div>
+          <div class="param-row"><span class="param-label" data-th="ตัวอย่าง n" data-en="Sample n">ตัวอย่าง n</span><input type="range" id="sr-n" min="3" max="40" value="10" step="1" oninput="updateSR()"><span class="param-val" id="sr-nv">10</span></div>
+          <button class="btn" onclick="drawSR()" data-th="สุ่มใหม่" data-en="Re-sample">สุ่มใหม่</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== SYSTEMATIC ===== -->
+  <div id="tab-systematic" class="tab-section">
+    <div class="layout">
+      <div class="card">
+        <div class="desc-inner">
+          <div class="desc-main">
+            <span class="method-badge badge-prob" data-th="อาศัยความน่าจะเป็น" data-en="Probability Sampling">อาศัยความน่าจะเป็น</span>
+            <div class="desc-name">Systematic Sampling</div>
+            <div class="desc-sub" data-th="การสุ่มตัวอย่างแบบมีระบบ" data-en="Select every k-th unit">การสุ่มตัวอย่างแบบมีระบบ</div>
+            <p class="method-desc" data-th="สุ่มจุดเริ่มต้น แล้วเลือกทุกๆ k หน่วย โดย k = N/n" data-en="Randomly pick a start point, then select every k-th unit where k = N/n.">สุ่มจุดเริ่มต้น แล้วเลือกทุกๆ k หน่วย โดย k = N/n</p>
+          </div>
+          <div>
+            <div class="card-title" style="font-size:16px" data-th="ขั้นตอน" data-en="Steps">ขั้นตอน</div>
+            <ol class="method-steps">
+              <li data-th="คำนวณ k = N ÷ n" data-en="Calculate k = N ÷ n">คำนวณ k = N ÷ n</li>
+              <li data-th="สุ่มจุดเริ่มต้น r (1 ถึง k)" data-en="Pick random start r (1 to k)">สุ่มจุดเริ่มต้น r (1 ถึง k)</li>
+              <li data-th="เลือก r, r+k, r+2k, … จนครบ" data-en="Select r, r+k, r+2k … until n">เลือก r, r+k, r+2k, … จนครบ</li>
+            </ol>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+            <div class="pros"><div class="pros-title" data-th="✓ ข้อดี" data-en="✓ Pros">✓ ข้อดี</div><ul>
+              <li data-th="ง่าย รวดเร็ว" data-en="Simple and fast">ง่าย รวดเร็ว</li>
+              <li data-th="กระจายครอบคลุม list" data-en="Covers entire list">กระจายครอบคลุม list</li>
+            </ul></div>
+            <div class="cons"><div class="cons-title" data-th="✗ ข้อจำกัด" data-en="✗ Cons">✗ ข้อจำกัด</div><ul>
+              <li data-th="อาจมี periodic bias" data-en="Risk of periodic bias">อาจมี periodic bias</li>
+              <li data-th="ต้องเรียงรายการก่อน" data-en="List must be ordered">ต้องเรียงรายการก่อน</li>
+            </ul></div>
+          </div>
+        </div>
+      </div>
+      <div class="bottom-row">
+        <div class="card">
+          <div class="card-title" data-th="ภาพจำลอง" data-en="Visualization">ภาพจำลอง</div>
+          <canvas id="cvs-systematic" height="320"></canvas>
+          <div class="legend">
+            <div class="legend-item"><div class="dot" style="background:#ccc;border:1px solid #aaa"></div><span data-th="หน่วยใน population" data-en="Population unit">หน่วยใน population</span></div>
+            <div class="legend-item"><div class="dot" style="background:#1a1a1a"></div><span data-th="ถูกเลือก (ทุกๆ k)" data-en="Selected (every k-th)">ถูกเลือก (ทุกๆ k)</span></div>
+            <div class="legend-item"><div class="dot" style="background:#e8a020;border-radius:2px"></div><span data-th="จุดเริ่มต้น r" data-en="Starting point r">จุดเริ่มต้น r</span></div>
+          </div>
+          <div class="stat-row">
+            <div class="stat"><div class="stat-val" id="sy-s1">—</div><div class="stat-lbl">k (interval)</div></div>
+            <div class="stat"><div class="stat-val" id="sy-s2">—</div><div class="stat-lbl">r (start)</div></div>
+            <div class="stat"><div class="stat-val" id="sy-s3">—</div><div class="stat-lbl" data-th="n ที่เลือกได้" data-en="n selected">n ที่เลือกได้</div></div>
+          </div>
+          <div class="insight" id="sy-insight"></div>
+        </div>
+        <div class="card">
+          <div class="card-title" data-th="ตั้งค่า" data-en="Parameters">ตั้งค่า</div>
+          <div class="param-row"><span class="param-label" data-th="ประชากร N" data-en="Population N">ประชากร N</span><input type="range" id="sy-N" min="20" max="120" value="60" step="5" oninput="updateSY()"><span class="param-val" id="sy-Nv">60</span></div>
+          <div class="param-row"><span class="param-label" data-th="ตัวอย่าง n" data-en="Sample n">ตัวอย่าง n</span><input type="range" id="sy-n" min="3" max="30" value="10" step="1" oninput="updateSY()"><span class="param-val" id="sy-nv">10</span></div>
+          <div class="kinfo" id="sy-kinfo">k = 6</div>
+          <button class="btn" onclick="drawSY()" data-th="สุ่มจุดเริ่มต้นใหม่" data-en="New starting point">สุ่มจุดเริ่มต้นใหม่</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== STRATIFIED ===== -->
+  <div id="tab-stratified" class="tab-section">
+    <div class="layout">
+      <div class="card">
+        <div class="desc-inner">
+          <div class="desc-main">
+            <span class="method-badge badge-prob" data-th="อาศัยความน่าจะเป็น" data-en="Probability Sampling">อาศัยความน่าจะเป็น</span>
+            <div class="desc-name">Stratified Sampling</div>
+            <div class="desc-sub" data-th="การสุ่มตัวอย่างแบบแบ่งชั้น" data-en="Sample each subgroup separately">การสุ่มตัวอย่างแบบแบ่งชั้น</div>
+            <p class="method-desc" data-th="แบ่ง population เป็น strata แล้วสุ่มจากแต่ละกลุ่มแยกกัน" data-en="Divide population into homogeneous strata, then independently sample from each.">แบ่ง population เป็น strata แล้วสุ่มจากแต่ละกลุ่มแยกกัน</p>
+          </div>
+          <div>
+            <div class="card-title" style="font-size:16px" data-th="ขั้นตอน" data-en="Steps">ขั้นตอน</div>
+            <ol class="method-steps">
+              <li data-th="กำหนด strata ตามตัวแปรที่สนใจ" data-en="Define strata by key variable">กำหนด strata ตามตัวแปรที่สนใจ</li>
+              <li data-th="คำนวณสัดส่วนแต่ละ strata" data-en="Calculate stratum proportions">คำนวณสัดส่วนแต่ละ strata</li>
+              <li data-th="สุ่มจากแต่ละ strata ตามสัดส่วน" data-en="Sample proportionally from each">สุ่มจากแต่ละ strata ตามสัดส่วน</li>
+            </ol>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+            <div class="pros"><div class="pros-title" data-th="✓ ข้อดี" data-en="✓ Pros">✓ ข้อดี</div><ul>
+              <li data-th="ตัวแทนครบทุกกลุ่ม" data-en="All groups represented">ตัวแทนครบทุกกลุ่ม</li>
+              <li data-th="แม่นยำสูงกว่า SRS" data-en="More precise than SRS">แม่นยำสูงกว่า SRS</li>
+            </ul></div>
+            <div class="cons"><div class="cons-title" data-th="✗ ข้อจำกัด" data-en="✗ Cons">✗ ข้อจำกัด</div><ul>
+              <li data-th="ต้องรู้ข้อมูล strata ก่อน" data-en="Requires prior strata knowledge">ต้องรู้ข้อมูล strata ก่อน</li>
+              <li data-th="ซับซ้อนกว่า SRS" data-en="More complex than SRS">ซับซ้อนกว่า SRS</li>
+            </ul></div>
+          </div>
+        </div>
+      </div>
+      <div class="bottom-row">
+        <div class="card">
+          <div class="card-title" data-th="ภาพจำลอง" data-en="Visualization">ภาพจำลอง</div>
+          <canvas id="cvs-stratified" height="320"></canvas>
+          <div class="stratum-legend" id="st-legend"></div>
+          <div class="stat-row">
+            <div class="stat"><div class="stat-val" id="st-s1">—</div><div class="stat-lbl" data-th="จำนวน strata" data-en="No. of strata">จำนวน strata</div></div>
+            <div class="stat"><div class="stat-val" id="st-s2">—</div><div class="stat-lbl" data-th="n รวม" data-en="Total n">n รวม</div></div>
+            <div class="stat"><div class="stat-val" id="st-s3">—</div><div class="stat-lbl" data-th="วิธีจัดสรร" data-en="Allocation">วิธีจัดสรร</div></div>
+          </div>
+          <div class="insight" id="st-insight"></div>
+        </div>
+        <div class="card">
+          <div class="card-title" data-th="ตั้งค่า" data-en="Parameters">ตั้งค่า</div>
+          <div style="margin-bottom:12px">
+            <span class="param-label" data-th="จำนวน strata" data-en="No. of strata">จำนวน strata</span>
+            <select id="st-strata" onchange="drawST()">
+              <option value="2" data-th="2 กลุ่ม" data-en="2 groups">2 กลุ่ม</option>
+              <option value="3" selected data-th="3 กลุ่ม" data-en="3 groups">3 กลุ่ม</option>
+              <option value="4" data-th="4 กลุ่ม" data-en="4 groups">4 กลุ่ม</option>
+            </select>
+          </div>
+          <div class="param-row"><span class="param-label" data-th="ตัวอย่าง n" data-en="Sample n">ตัวอย่าง n</span><input type="range" id="st-n" min="6" max="40" value="15" step="1" oninput="drawST()"><span class="param-val" id="st-nv">15</span></div>
+          <div style="margin-bottom:12px">
+            <span class="param-label" data-th="วิธีจัดสรร" data-en="Allocation">วิธีจัดสรร</span>
+            <select id="st-alloc" onchange="drawST()">
+              <option value="prop">Proportional</option>
+              <option value="equal">Equal</option>
+            </select>
+          </div>
+          <button class="btn" onclick="drawST()" data-th="สุ่มใหม่" data-en="Re-sample">สุ่มใหม่</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== CLUSTER ===== -->
+  <div id="tab-cluster" class="tab-section">
+    <div class="layout">
+      <div class="card">
+        <div class="desc-inner">
+          <div class="desc-main">
+            <span class="method-badge badge-prob" data-th="อาศัยความน่าจะเป็น" data-en="Probability Sampling">อาศัยความน่าจะเป็น</span>
+            <div class="desc-name">Cluster Sampling</div>
+            <div class="desc-sub" data-th="การสุ่มตัวอย่างแบบกลุ่มก้อน" data-en="Select whole clusters randomly">การสุ่มตัวอย่างแบบกลุ่มก้อน</div>
+            <p class="method-desc" data-th="สุ่มเลือก cluster แล้วเก็บข้อมูล ทุกหน่วย ในกลุ่มที่ถูกเลือก" data-en="Randomly select clusters, then collect data from ALL units in each chosen cluster.">สุ่มเลือก cluster แล้วเก็บข้อมูล ทุกหน่วย ในกลุ่มที่ถูกเลือก</p>
+          </div>
+          <div>
+            <div class="card-title" style="font-size:16px" data-th="ขั้นตอน" data-en="Steps">ขั้นตอน</div>
+            <ol class="method-steps">
+              <li data-th="แบ่ง population เป็น cluster" data-en="Divide population into clusters">แบ่ง population เป็น cluster</li>
+              <li data-th="สุ่มเลือก m cluster" data-en="Randomly select m clusters">สุ่มเลือก m cluster</li>
+              <li data-th="เก็บข้อมูลทุกหน่วยใน cluster ที่เลือก" data-en="Collect all units in chosen clusters">เก็บข้อมูลทุกหน่วยใน cluster ที่เลือก</li>
+            </ol>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+            <div class="pros"><div class="pros-title" data-th="✓ ข้อดี" data-en="✓ Pros">✓ ข้อดี</div><ul>
+              <li data-th="ประหยัดค่าเดินทาง" data-en="Saves travel costs">ประหยัดค่าเดินทาง</li>
+              <li data-th="ไม่ต้องมี frame ทั้ง pop." data-en="No full frame needed">ไม่ต้องมี frame ทั้ง pop.</li>
+            </ul></div>
+            <div class="cons"><div class="cons-title" data-th="✗ ข้อจำกัด" data-en="✗ Cons">✗ ข้อจำกัด</div><ul>
+              <li data-th="Sampling error สูงกว่า" data-en="Higher sampling error">Sampling error สูงกว่า</li>
+              <li data-th="หน่วยในกลุ่มอาจคล้ายกัน" data-en="Within-cluster similarity">หน่วยในกลุ่มอาจคล้ายกัน</li>
+            </ul></div>
+          </div>
+        </div>
+      </div>
+      <div class="bottom-row">
+        <div class="card">
+          <div class="card-title" data-th="ภาพจำลอง" data-en="Visualization">ภาพจำลอง</div>
+          <canvas id="cvs-cluster" height="320"></canvas>
+          <div class="legend">
+            <div class="legend-item"><div class="dot" style="background:#e8e8e8;border:1px solid #bbb"></div><span data-th="cluster ไม่ถูกเลือก" data-en="Unselected cluster">cluster ไม่ถูกเลือก</span></div>
+            <div class="legend-item"><div class="dot" style="background:#1a1a1a"></div><span data-th="cluster ถูกเลือก" data-en="Selected cluster">cluster ถูกเลือก</span></div>
+          </div>
+          <div class="stat-row">
+            <div class="stat"><div class="stat-val" id="cl-s1">—</div><div class="stat-lbl" data-th="cluster ทั้งหมด" data-en="Total clusters">cluster ทั้งหมด</div></div>
+            <div class="stat"><div class="stat-val" id="cl-s2">—</div><div class="stat-lbl" data-th="cluster ถูกเลือก" data-en="Selected">cluster ถูกเลือก</div></div>
+            <div class="stat"><div class="stat-val" id="cl-s3">—</div><div class="stat-lbl" data-th="หน่วยในตัวอย่าง" data-en="Units in sample">หน่วยในตัวอย่าง</div></div>
+          </div>
+          <div class="insight" id="cl-insight"></div>
+        </div>
+        <div class="card">
+          <div class="card-title" data-th="ตั้งค่า" data-en="Parameters">ตั้งค่า</div>
+          <div class="param-row"><span class="param-label" data-th="cluster ทั้งหมด" data-en="Total clusters">cluster ทั้งหมด</span><input type="range" id="cl-total" min="4" max="16" value="9" step="1" oninput="drawCL()"><span class="param-val" id="cl-totalv">9</span></div>
+          <div class="param-row"><span class="param-label" data-th="เลือก m" data-en="Select m">เลือก m</span><input type="range" id="cl-m" min="1" max="8" value="3" step="1" oninput="drawCL()"><span class="param-val" id="cl-mv">3</span></div>
+          <button class="btn" onclick="drawCL()" data-th="สุ่ม cluster ใหม่" data-en="Resample clusters">สุ่ม cluster ใหม่</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== CONVENIENCE ===== -->
+  <div id="tab-convenience" class="tab-section">
+    <div class="layout">
+      <div class="card">
+        <div class="desc-inner">
+          <div class="desc-main">
+            <span class="method-badge badge-nonprob" data-th="ไม่อาศัยความน่าจะเป็น" data-en="Non-Probability Sampling">ไม่อาศัยความน่าจะเป็น</span>
+            <div class="desc-name">Convenience Sampling</div>
+            <div class="desc-sub" data-th="การสุ่มตัวอย่างแบบบังเอิญ" data-en="Whoever is easiest to reach">การสุ่มตัวอย่างแบบบังเอิญ</div>
+            <p class="method-desc" data-th="เลือกหน่วยที่หาได้ง่ายที่สุด ณ ขณะนั้น" data-en="Select whoever is most accessible at the time.">เลือกหน่วยที่หาได้ง่ายที่สุด ณ ขณะนั้น</p>
+          </div>
+          <div>
+            <div class="card-title" style="font-size:16px" data-th="ขั้นตอน" data-en="Steps">ขั้นตอน</div>
+            <ol class="method-steps">
+              <li data-th="กำหนดแหล่งที่เข้าถึงได้" data-en="Identify accessible source">กำหนดแหล่งที่เข้าถึงได้</li>
+              <li data-th="เก็บข้อมูลจากหน่วยที่พบ" data-en="Collect from whoever is found">เก็บข้อมูลจากหน่วยที่พบ</li>
+              <li data-th="หยุดเมื่อครบ n" data-en="Stop when n is reached">หยุดเมื่อครบ n</li>
+            </ol>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+            <div class="pros"><div class="pros-title" data-th="✓ ข้อดี" data-en="✓ Pros">✓ ข้อดี</div><ul>
+              <li data-th="รวดเร็ว ประหยัด" data-en="Fast and cheap">รวดเร็ว ประหยัด</li>
+              <li data-th="เหมาะกับ pilot study" data-en="Good for pilot study">เหมาะกับ pilot study</li>
+            </ul></div>
+            <div class="cons"><div class="cons-title" data-th="✗ ข้อจำกัด" data-en="✗ Cons">✗ ข้อจำกัด</div><ul>
+              <li data-th="Selection bias สูง" data-en="High selection bias">Selection bias สูง</li>
+              <li data-th="ไม่สามารถ generalize" data-en="Cannot generalize">ไม่สามารถ generalize</li>
+            </ul></div>
+          </div>
+        </div>
+      </div>
+      <div class="bottom-row">
+        <div class="card">
+          <div class="card-title" data-th="ภาพจำลอง — สังเกต bias" data-en="Visualization — observe bias">ภาพจำลอง — สังเกต bias</div>
+          <canvas id="cvs-convenience" height="320"></canvas>
+          <div class="legend">
+            <div class="legend-item"><div class="dot" style="background:#ccc;border:1px solid #aaa"></div><span data-th="population ทั้งหมด" data-en="Entire population">population ทั้งหมด</span></div>
+            <div class="legend-item"><div class="dot" style="background:#1a1a1a"></div><span data-th="ถูกเลือก (อยู่ในโซน)" data-en="Selected (inside zone)">ถูกเลือก (อยู่ในโซน)</span></div>
+            <div class="legend-item"><div class="dot" style="background:transparent;border:2px dashed #e84040;border-radius:4px;width:20px;height:13px"></div><span data-th="โซนที่เข้าถึงได้" data-en="Accessible zone">โซนที่เข้าถึงได้</span></div>
+          </div>
+          <div class="stat-row">
+            <div class="stat"><div class="stat-val" id="cv-s1">—</div><div class="stat-lbl" data-th="n เลือกได้" data-en="n selected">n เลือกได้</div></div>
+            <div class="stat"><div class="stat-val" id="cv-s2">—</div><div class="stat-lbl" data-th="% ของ pop." data-en="% of pop.">% ของ pop.</div></div>
+            <div class="stat"><div class="stat-val" id="cv-s3">—</div><div class="stat-lbl">Bias Zone</div></div>
+          </div>
+          <div class="insight" id="cv-insight"></div>
+        </div>
+        <div class="card">
+          <div class="card-title" data-th="ตั้งค่า" data-en="Parameters">ตั้งค่า</div>
+          <div class="param-row"><span class="param-label" data-th="ขนาด n" data-en="Sample n">ขนาด n</span><input type="range" id="cv-n" min="5" max="40" value="15" step="1" oninput="drawCV()"><span class="param-val" id="cv-nv">15</span></div>
+          <div style="margin-bottom:12px">
+            <span class="param-label" data-th="โซนที่เข้าถึงได้" data-en="Accessible zone">โซนที่เข้าถึงได้</span>
+            <select id="cv-zone" onchange="drawCV()">
+              <option value="corner" data-th="มุมห้อง (ขวาล่าง)" data-en="Corner (bottom-right)">มุมห้อง (ขวาล่าง)</option>
+              <option value="center" data-th="กลางห้อง" data-en="Center">กลางห้อง</option>
+              <option value="row1" data-th="แถวหน้า" data-en="Front rows">แถวหน้า</option>
+            </select>
+          </div>
+          <button class="btn" onclick="drawCV()" data-th="จำลองใหม่" data-en="Simulate again">จำลองใหม่</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== PURPOSIVE ===== -->
+  <div id="tab-purposive" class="tab-section">
+    <div class="layout">
+      <div class="card">
+        <div class="desc-inner">
+          <div class="desc-main">
+            <span class="method-badge badge-nonprob" data-th="ไม่อาศัยความน่าจะเป็น" data-en="Non-Probability Sampling">ไม่อาศัยความน่าจะเป็น</span>
+            <div class="desc-name">Purposive Sampling</div>
+            <div class="desc-sub" data-th="การสุ่มตัวอย่างแบบเจาะจง" data-en="Researcher selects by criteria">การสุ่มตัวอย่างแบบเจาะจง</div>
+            <p class="method-desc" data-th="ผู้วิจัยใช้วิจารณญาณเลือกหน่วยที่ตรงเกณฑ์ที่กำหนด" data-en="Researcher uses judgment to select units meeting specific criteria.">ผู้วิจัยใช้วิจารณญาณเลือกหน่วยที่ตรงเกณฑ์ที่กำหนด</p>
+          </div>
+          <div>
+            <div class="card-title" style="font-size:16px" data-th="ขั้นตอน" data-en="Steps">ขั้นตอน</div>
+            <ol class="method-steps">
+              <li data-th="กำหนดเกณฑ์คัดเลือก" data-en="Define selection criteria">กำหนดเกณฑ์คัดเลือก</li>
+              <li data-th="ระบุหน่วยที่ตรงเกณฑ์" data-en="Identify qualifying units">ระบุหน่วยที่ตรงเกณฑ์</li>
+              <li data-th="เลือกทั้งหมดหรือสุ่มจากกลุ่มนั้น" data-en="Select all or sample from that group">เลือกทั้งหมดหรือสุ่มจากกลุ่มนั้น</li>
+            </ol>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+            <div class="pros"><div class="pros-title" data-th="✓ ข้อดี" data-en="✓ Pros">✓ ข้อดี</div><ul>
+              <li data-th="ได้หน่วยที่ใช่จริงๆ" data-en="Gets exactly the right units">ได้หน่วยที่ใช่จริงๆ</li>
+              <li data-th="เหมาะวิจัยเชิงคุณภาพ" data-en="Ideal for qualitative research">เหมาะวิจัยเชิงคุณภาพ</li>
+            </ul></div>
+            <div class="cons"><div class="cons-title" data-th="✗ ข้อจำกัด" data-en="✗ Cons">✗ ข้อจำกัด</div><ul>
+              <li data-th="อาศัย judgment ผู้วิจัย" data-en="Relies on researcher's judgment">อาศัย judgment ผู้วิจัย</li>
+              <li data-th="ไม่สามารถ generalize" data-en="Cannot generalize">ไม่สามารถ generalize</li>
+            </ul></div>
+          </div>
+        </div>
+      </div>
+      <div class="bottom-row">
+        <div class="card">
+          <div class="card-title" data-th="ภาพจำลอง — การเลือกตามเกณฑ์" data-en="Visualization — criterion-based selection">ภาพจำลอง — การเลือกตามเกณฑ์</div>
+          <canvas id="cvs-purposive" height="320"></canvas>
+          <div class="legend">
+            <div class="legend-item"><div class="dot" style="background:#ccc;border:1px solid #aaa"></div><span data-th="ไม่ตรงเกณฑ์" data-en="Does not qualify">ไม่ตรงเกณฑ์</span></div>
+            <div class="legend-item"><div class="dot" style="background:#1a1a1a"></div><span data-th="ตรงเกณฑ์ → ถูกเลือก" data-en="Qualifies → Selected">ตรงเกณฑ์ → ถูกเลือก</span></div>
+          </div>
+          <div class="stat-row">
+            <div class="stat"><div class="stat-val" id="pu-s1">—</div><div class="stat-lbl" data-th="ตรงเกณฑ์" data-en="Qualifies">ตรงเกณฑ์</div></div>
+            <div class="stat"><div class="stat-val" id="pu-s2">—</div><div class="stat-lbl" data-th="ไม่ตรงเกณฑ์" data-en="Excluded">ไม่ตรงเกณฑ์</div></div>
+            <div class="stat"><div class="stat-val" id="pu-s3">—</div><div class="stat-lbl" data-th="% ตรงเกณฑ์" data-en="% qualifying">% ตรงเกณฑ์</div></div>
+          </div>
+          <div class="insight" id="pu-insight"></div>
+        </div>
+        <div class="card">
+          <div class="card-title" data-th="ตั้งค่า" data-en="Parameters">ตั้งค่า</div>
+          <div style="margin-bottom:12px">
+            <span class="param-label" data-th="เกณฑ์คัดเลือก" data-en="Selection criterion">เกณฑ์คัดเลือก</span>
+            <select id="pu-crit" onchange="drawPU()">
+              <option value="expert" data-th="ผู้เชี่ยวชาญ (ดาว)" data-en="Experts (★)">ผู้เชี่ยวชาญ (ดาว)</option>
+              <option value="senior" data-th="อาวุโส (วงใหญ่)" data-en="Senior (large circle)">อาวุโส (วงใหญ่)</option>
+              <option value="specific" data-th="กลุ่มเฉพาะ" data-en="Specific group">กลุ่มเฉพาะ</option>
+            </select>
+          </div>
+          <button class="btn" onclick="drawPU()" data-th="จำลองใหม่" data-en="Simulate again">จำลองใหม่</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== QUOTA ===== -->
+  <div id="tab-quota" class="tab-section">
+    <div class="layout">
+      <div class="card">
+        <div class="desc-inner">
+          <div class="desc-main">
+            <span class="method-badge badge-nonprob" data-th="ไม่อาศัยความน่าจะเป็น" data-en="Non-Probability Sampling">ไม่อาศัยความน่าจะเป็น</span>
+            <div class="desc-name">Quota Sampling</div>
+            <div class="desc-sub" data-th="การสุ่มตัวอย่างแบบโควตา" data-en="Fill preset quotas per group">การสุ่มตัวอย่างแบบโควตา</div>
+            <p class="method-desc" data-th="กำหนดโควตาแต่ละกลุ่มล่วงหน้า แล้วเลือกหน่วยจนครบโควตา คล้าย Stratified แต่ไม่สุ่ม" data-en="Pre-set quotas for each group, then non-randomly fill them. Similar to Stratified but without randomization.">กำหนดโควตาแต่ละกลุ่มล่วงหน้า แล้วเลือกหน่วยจนครบโควตา คล้าย Stratified แต่ไม่สุ่ม</p>
+          </div>
+          <div>
+            <div class="card-title" style="font-size:16px" data-th="ขั้นตอน" data-en="Steps">ขั้นตอน</div>
+            <ol class="method-steps">
+              <li data-th="กำหนดกลุ่มย่อย (quota cells)" data-en="Define subgroups (quota cells)">กำหนดกลุ่มย่อย (quota cells)</li>
+              <li data-th="กำหนดจำนวนที่ต้องการแต่ละกลุ่ม" data-en="Set target count per group">กำหนดจำนวนที่ต้องการแต่ละกลุ่ม</li>
+              <li data-th="เก็บข้อมูลจนครบโควตา" data-en="Collect data until quotas are met">เก็บข้อมูลจนครบโควตา</li>
+            </ol>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+            <div class="pros"><div class="pros-title" data-th="✓ ข้อดี" data-en="✓ Pros">✓ ข้อดี</div><ul>
+              <li data-th="มีสัดส่วนกลุ่มตามที่กำหนด" data-en="Group proportions ensured">มีสัดส่วนกลุ่มตามที่กำหนด</li>
+              <li data-th="ไม่ต้องมี sampling frame" data-en="No sampling frame needed">ไม่ต้องมี sampling frame</li>
+            </ul></div>
+            <div class="cons"><div class="cons-title" data-th="✗ ข้อจำกัด" data-en="✗ Cons">✗ ข้อจำกัด</div><ul>
+              <li data-th="ภายในกลุ่มยังมี bias" data-en="Within-group bias remains">ภายในกลุ่มยังมี bias</li>
+              <li data-th="ขึ้นกับผู้สัมภาษณ์" data-en="Depends on interviewer">ขึ้นกับผู้สัมภาษณ์</li>
+            </ul></div>
+          </div>
+        </div>
+      </div>
+      <div class="bottom-row">
+        <div class="card">
+          <div class="card-title" data-th="ภาพจำลอง — เติมโควตา" data-en="Visualization — filling quotas">ภาพจำลอง — เติมโควตา</div>
+          <canvas id="cvs-quota" height="320"></canvas>
+          <div class="legend">
+            <div class="legend-item"><div class="dot" style="background:#90c0ff"></div><span data-th="ชาย — ยังไม่ครบ" data-en="Male — not yet met">ชาย — ยังไม่ครบ</span></div>
+            <div class="legend-item"><div class="dot" style="background:#1a1a1a"></div><span data-th="ชาย — ครบโควตา" data-en="Male — quota met">ชาย — ครบโควตา</span></div>
+            <div class="legend-item"><div class="dot" style="background:#ffb0c8"></div><span data-th="หญิง — ยังไม่ครบ" data-en="Female — not yet met">หญิง — ยังไม่ครบ</span></div>
+            <div class="legend-item"><div class="dot" style="background:#888"></div><span data-th="หญิง — ครบโควตา" data-en="Female — quota met">หญิง — ครบโควตา</span></div>
+          </div>
+          <div class="stat-row">
+            <div class="stat"><div class="stat-val" id="qu-s1">—</div><div class="stat-lbl" data-th="โควตาชาย" data-en="Male quota">โควตาชาย</div></div>
+            <div class="stat"><div class="stat-val" id="qu-s2">—</div><div class="stat-lbl" data-th="โควตาหญิง" data-en="Female quota">โควตาหญิง</div></div>
+            <div class="stat"><div class="stat-val" id="qu-s3">—</div><div class="stat-lbl" data-th="n รวม" data-en="Total n">n รวม</div></div>
+          </div>
+          <div class="insight" id="qu-insight"></div>
+        </div>
+        <div class="card">
+          <div class="card-title" data-th="ตั้งค่า" data-en="Parameters">ตั้งค่า</div>
+          <div class="param-row"><span class="param-label" data-th="โควตาชาย" data-en="Male quota">โควตาชาย</span><input type="range" id="qu-m" min="2" max="20" value="10" step="1" oninput="drawQU()"><span class="param-val" id="qu-mv">10</span></div>
+          <div class="param-row"><span class="param-label" data-th="โควตาหญิง" data-en="Female quota">โควตาหญิง</span><input type="range" id="qu-f" min="2" max="20" value="10" step="1" oninput="drawQU()"><span class="param-val" id="qu-fv">10</span></div>
+          <button class="btn" onclick="drawQU()" data-th="จำลองใหม่" data-en="Simulate again">จำลองใหม่</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== SNOWBALL ===== -->
+  <div id="tab-snowball" class="tab-section">
+    <div class="layout">
+      <div class="card">
+        <div class="desc-inner">
+          <div class="desc-main">
+            <span class="method-badge badge-nonprob" data-th="ไม่อาศัยความน่าจะเป็น" data-en="Non-Probability Sampling">ไม่อาศัยความน่าจะเป็น</span>
+            <div class="desc-name">Snowball Sampling</div>
+            <div class="desc-sub" data-th="การสุ่มตัวอย่างแบบลูกหิมะ" data-en="Participants recruit further participants">การสุ่มตัวอย่างแบบลูกหิมะ</div>
+            <p class="method-desc" data-th="เริ่มจาก seed แล้วขอให้แนะนำผู้รู้จักต่อไปเรื่อยๆ เหมาะกับประชากรที่หาตัวยาก" data-en="Start from seeds, ask each to refer others. Best for hard-to-reach populations.">เริ่มจาก seed แล้วขอให้แนะนำผู้รู้จักต่อไปเรื่อยๆ เหมาะกับประชากรที่หาตัวยาก</p>
+          </div>
+          <div>
+            <div class="card-title" style="font-size:16px" data-th="ขั้นตอน" data-en="Steps">ขั้นตอน</div>
+            <ol class="method-steps">
+              <li data-th="เลือก seed 1–3 คน" data-en="Select 1–3 seeds">เลือก seed 1–3 คน</li>
+              <li data-th="ขอให้แนะนำผู้รู้จักที่ตรงคุณสมบัติ" data-en="Ask each to refer qualifying contacts">ขอให้แนะนำผู้รู้จักที่ตรงคุณสมบัติ</li>
+              <li data-th="ทำซ้ำจนครบ n หรืออิ่มตัว" data-en="Repeat until n or saturation">ทำซ้ำจนครบ n หรืออิ่มตัว</li>
+            </ol>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+            <div class="pros"><div class="pros-title" data-th="✓ ข้อดี" data-en="✓ Pros">✓ ข้อดี</div><ul>
+              <li data-th="เข้าถึง hidden population" data-en="Reaches hidden populations">เข้าถึง hidden population</li>
+              <li data-th="สร้างความไว้วางใจผ่าน referral" data-en="Builds trust through referral">สร้างความไว้วางใจผ่าน referral</li>
+            </ul></div>
+            <div class="cons"><div class="cons-title" data-th="✗ ข้อจำกัด" data-en="✗ Cons">✗ ข้อจำกัด</div><ul>
+              <li data-th="ขึ้นกับ network ของ seed" data-en="Depends on seed's network">ขึ้นกับ network ของ seed</li>
+              <li data-th="ไม่ generalize ได้" data-en="Cannot generalize">ไม่ generalize ได้</li>
+            </ul></div>
+          </div>
+        </div>
+      </div>
+      <div class="bottom-row">
+        <div class="card">
+          <div class="card-title" data-th="ภาพจำลอง — network referral" data-en="Visualization — network referral">ภาพจำลอง — network referral</div>
+          <canvas id="cvs-snowball" height="320"></canvas>
+          <div class="legend">
+            <div class="legend-item"><div class="dot" style="background:#e84040"></div><span data-th="Seed (เริ่มต้น)" data-en="Seed (initial)">Seed (เริ่มต้น)</span></div>
+            <div class="legend-item"><div class="dot" style="background:#1a1a1a"></div><span data-th="รอบที่ 1" data-en="Round 1">รอบที่ 1</span></div>
+            <div class="legend-item"><div class="dot" style="background:#666"></div><span data-th="รอบที่ 2+" data-en="Round 2+">รอบที่ 2+</span></div>
+            <div class="legend-item"><div class="dot" style="background:#ccc;border:1px solid #aaa"></div><span data-th="ไม่ถูกเข้าถึง" data-en="Not reached">ไม่ถูกเข้าถึง</span></div>
+          </div>
+          <div class="stat-row">
+            <div class="stat"><div class="stat-val" id="sb-s1">—</div><div class="stat-lbl">Seed</div></div>
+            <div class="stat"><div class="stat-val" id="sb-s2">—</div><div class="stat-lbl" data-th="n รวม" data-en="Total n">n รวม</div></div>
+            <div class="stat"><div class="stat-val" id="sb-s3">—</div><div class="stat-lbl" data-th="% เข้าถึง" data-en="% reached">% เข้าถึง</div></div>
+          </div>
+          <div class="insight" id="sb-insight"></div>
+        </div>
+        <div class="card">
+          <div class="card-title" data-th="ตั้งค่า" data-en="Parameters">ตั้งค่า</div>
+          <div class="param-row"><span class="param-label" data-th="จำนวน seed" data-en="No. of seeds">จำนวน seed</span><input type="range" id="sb-seed" min="1" max="4" value="2" step="1" oninput="drawSB()"><span class="param-val" id="sb-seedv">2</span></div>
+          <div class="param-row"><span class="param-label" data-th="รอบ referral" data-en="Referral rounds">รอบ referral</span><input type="range" id="sb-rounds" min="1" max="4" value="3" step="1" oninput="drawSB()"><span class="param-val" id="sb-roundsv">3</span></div>
+          <div class="param-row"><span class="param-label" data-th="referral/คน" data-en="Referrals/person">referral/คน</span><input type="range" id="sb-ref" min="1" max="4" value="2" step="1" oninput="drawSB()"><span class="param-val" id="sb-refv">2</span></div>
+          <button class="btn" onclick="drawSB()" data-th="สุ่ม network ใหม่" data-en="New network">สุ่ม network ใหม่</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== OVERVIEW ===== -->
+  <div id="tab-overview" class="tab-section">
+    <div class="card" style="margin-bottom:16px">
+      <div class="card-title" data-th="ภาพรวมวิธีการสุ่มตัวอย่างทั้ง 8 วิธี" data-en="Overview of All 8 Sampling Methods">ภาพรวมวิธีการสุ่มตัวอย่างทั้ง 8 วิธี</div>
+      <table class="overview-table">
+        <thead>
+          <tr><th data-th="วิธี" data-en="Method">วิธี</th><th data-th="ประเภท" data-en="Type">ประเภท</th><th data-th="หลักการ" data-en="Principle">หลักการ</th><th data-th="เหมาะกับ" data-en="Best for">เหมาะกับ</th><th>Generalize</th><th data-th="ต้นทุน" data-en="Cost">ต้นทุน</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><b>Simple Random</b></td><td class="type-prob" data-th="อาศัย P" data-en="Probability">อาศัย P</td><td data-th="สุ่มทุกหน่วยเท่ากัน" data-en="Equal probability">สุ่มทุกหน่วยเท่ากัน</td><td data-th="Population เข้าถึงได้" data-en="Accessible population">Population เข้าถึงได้</td><td><span class="tag tag-green" data-th="✓ ดีมาก" data-en="✓ Excellent">✓ ดีมาก</span></td><td><span class="tag tag-yellow" data-th="กลาง" data-en="Medium">กลาง</span></td></tr>
+          <tr><td><b>Systematic</b></td><td class="type-prob" data-th="อาศัย P" data-en="Probability">อาศัย P</td><td data-th="เลือกทุกๆ k หน่วย" data-en="Every k-th unit">เลือกทุกๆ k หน่วย</td><td data-th="มี list เรียงลำดับ" data-en="Ordered list available">มี list เรียงลำดับ</td><td><span class="tag tag-green" data-th="✓ ดี" data-en="✓ Good">✓ ดี</span></td><td><span class="tag tag-green" data-th="ต่ำ" data-en="Low">ต่ำ</span></td></tr>
+          <tr><td><b>Stratified</b></td><td class="type-prob" data-th="อาศัย P" data-en="Probability">อาศัย P</td><td data-th="สุ่มแยกแต่ละ strata" data-en="Sample per stratum">สุ่มแยกแต่ละ strata</td><td data-th="ต้องการตัวแทนทุกกลุ่ม" data-en="All groups represented">ต้องการตัวแทนทุกกลุ่ม</td><td><span class="tag tag-green" data-th="✓ ดีมาก" data-en="✓ Excellent">✓ ดีมาก</span></td><td><span class="tag tag-yellow" data-th="กลาง" data-en="Medium">กลาง</span></td></tr>
+          <tr><td><b>Cluster</b></td><td class="type-prob" data-th="อาศัย P" data-en="Probability">อาศัย P</td><td data-th="สุ่มกลุ่ม เก็บทั้งกลุ่ม" data-en="Select clusters, collect all">สุ่มกลุ่ม เก็บทั้งกลุ่ม</td><td data-th="Population กระจายพื้นที่" data-en="Geographically dispersed">Population กระจายพื้นที่</td><td><span class="tag tag-yellow" data-th="✓ พอใช้" data-en="✓ Fair">✓ พอใช้</span></td><td><span class="tag tag-green" data-th="ต่ำ" data-en="Low">ต่ำ</span></td></tr>
+          <tr style="border-top:2px solid #ccc"><td><b>Convenience</b></td><td class="type-nonprob" data-th="ไม่อาศัย P" data-en="Non-Prob.">ไม่อาศัย P</td><td data-th="เลือกที่หาง่าย" data-en="Whoever is available">เลือกที่หาง่าย</td><td data-th="Pilot study" data-en="Pilot study">Pilot study</td><td><span class="tag tag-red" data-th="✗ ไม่ได้" data-en="✗ No">✗ ไม่ได้</span></td><td><span class="tag tag-green" data-th="ต่ำมาก" data-en="Very low">ต่ำมาก</span></td></tr>
+          <tr><td><b>Purposive</b></td><td class="type-nonprob" data-th="ไม่อาศัย P" data-en="Non-Prob.">ไม่อาศัย P</td><td data-th="เจาะจงตามเกณฑ์" data-en="Criterion-based">เจาะจงตามเกณฑ์</td><td data-th="วิจัยเชิงคุณภาพ" data-en="Qualitative research">วิจัยเชิงคุณภาพ</td><td><span class="tag tag-red" data-th="✗ ไม่ได้" data-en="✗ No">✗ ไม่ได้</span></td><td><span class="tag tag-yellow" data-th="กลาง" data-en="Medium">กลาง</span></td></tr>
+          <tr><td><b>Quota</b></td><td class="type-nonprob" data-th="ไม่อาศัย P" data-en="Non-Prob.">ไม่อาศัย P</td><td data-th="กำหนดโควตาแต่ละกลุ่ม" data-en="Pre-set quota per group">กำหนดโควตาแต่ละกลุ่ม</td><td data-th="สำรวจตลาด โพลล์" data-en="Market surveys, polls">สำรวจตลาด โพลล์</td><td><span class="tag tag-red" data-th="✗ จำกัด" data-en="✗ Limited">✗ จำกัด</span></td><td><span class="tag tag-green" data-th="ต่ำ" data-en="Low">ต่ำ</span></td></tr>
+          <tr><td><b>Snowball</b></td><td class="type-nonprob" data-th="ไม่อาศัย P" data-en="Non-Prob.">ไม่อาศัย P</td><td data-th="referral จาก seed" data-en="Referral from seeds">referral จาก seed</td><td data-th="Hidden population" data-en="Hidden populations">Hidden population</td><td><span class="tag tag-red" data-th="✗ ไม่ได้" data-en="✗ No">✗ ไม่ได้</span></td><td><span class="tag tag-yellow" data-th="กลาง" data-en="Medium">กลาง</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="card">
+      <div class="card-title" data-th="คำถามชวนคิด" data-en="Discussion Questions">คำถามชวนคิด</div>
+      <div class="q-chips">
+        <div class="q-chip" data-th="ทำไม Cluster มี sampling error สูงกว่า Stratified?" data-en="Why does Cluster have higher sampling error than Stratified?">ทำไม Cluster มี sampling error สูงกว่า Stratified?</div>
+        <div class="q-chip" data-th="Quota vs Stratified ต่างกันอย่างไร?" data-en="How does Quota differ from Stratified?">Quota vs Stratified ต่างกันอย่างไร?</div>
+        <div class="q-chip" data-th="เมื่อใดควรใช้วิธีไม่อาศัยความน่าจะเป็น?" data-en="When is non-probability sampling appropriate?">เมื่อใดควรใช้วิธีไม่อาศัยความน่าจะเป็น?</div>
+        <div class="q-chip" data-th="Snowball bias อย่างไรถ้า seed อยู่กลุ่มเดียวกัน?" data-en="How does Snowball bias if seeds share the same group?">Snowball bias อย่างไรถ้า seed อยู่กลุ่มเดียวกัน?</div>
+        <div class="q-chip" data-th="Systematic อาจมี bias เมื่อใด?" data-en="When can Systematic be biased?">Systematic อาจมี bias เมื่อใด?</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+var currentLang = 'th';
+
+function setLang(lang) {
+  currentLang = lang;
+  document.querySelectorAll('.lang-btn').forEach(function(b) {
+    b.classList.toggle('active', b.textContent.trim().toLowerCase() === lang);
+  });
+  document.querySelectorAll('[data-th]').forEach(function(el) {
+    var val = el.getAttribute('data-' + lang);
+    if (val) el.textContent = val;
+  });
+  document.querySelectorAll('select option[data-th]').forEach(function(opt) {
+    var val = opt.getAttribute('data-' + lang);
+    if (val) opt.textContent = val;
+  });
+  var active = document.querySelector('.tab-section.active');
+  if (active) setTimeout(function(){ redrawAll(active.id.replace('tab-','')); }, 20);
+}
+
+function switchTab(id, btn) {
+  document.querySelectorAll('.tab').forEach(function(t){ t.classList.remove('active'); });
+  document.querySelectorAll('.tab-section').forEach(function(s){ s.classList.remove('active'); });
+  if (btn) btn.classList.add('active');
+  document.getElementById('tab-'+id).classList.add('active');
+  setTimeout(function(){ redrawAll(id); }, 30);
+}
+
+function redrawAll(id) {
+  if (id==='simple') drawSR();
+  else if (id==='systematic') drawSY();
+  else if (id==='stratified') drawST();
+  else if (id==='cluster') drawCL();
+  else if (id==='convenience') drawCV();
+  else if (id==='purposive') drawPU();
+  else if (id==='quota') drawQU();
+  else if (id==='snowball') drawSB();
+}
+
+function getCtx(id) {
+  var cvs=document.getElementById(id), DPR=window.devicePixelRatio||1;
+  var W=cvs.offsetWidth, H=parseInt(cvs.getAttribute('height'));
+  cvs.width=W*DPR; cvs.height=H*DPR;
+  var ctx=cvs.getContext('2d'); ctx.scale(DPR,DPR);
+  return {ctx:ctx,W:W,H:H};
+}
+function t(th,en){ return currentLang==='en'?en:th; }
+var SC=['#1a1a1a','#555','#999','#ccc'];
+
+function updateSR(){ document.getElementById('sr-Nv').textContent=document.getElementById('sr-N').value; document.getElementById('sr-nv').textContent=document.getElementById('sr-n').value; drawSR(); }
+function drawSR(){
+  var N=parseInt(document.getElementById('sr-N').value), n=parseInt(document.getElementById('sr-n').value);
+  var r=getCtx('cvs-simple'),ctx=r.ctx,W=r.W,H=r.H; ctx.clearRect(0,0,W,H);
+  var pad=24,cols=Math.ceil(Math.sqrt(N*W/H)),cx=(W-pad*2)/cols,cy=(H-pad*2)/Math.ceil(N/cols),rd=Math.min(cx,cy)*0.35;
+  var sel={}; while(Object.keys(sel).length<Math.min(n,N)) sel[Math.floor(Math.random()*N)]=1;
+  for(var i=0;i<N;i++){
+    var col=i%cols,row=Math.floor(i/cols),x=pad+col*cx+cx/2,y=pad+row*cy+cy/2,ch=sel[i];
+    ctx.beginPath();ctx.arc(x,y,rd,0,Math.PI*2);ctx.fillStyle=ch?'#1a1a1a':'#d8d8d8';ctx.fill();
+    if(ch){ctx.beginPath();ctx.arc(x,y,rd+3,0,Math.PI*2);ctx.strokeStyle='#1a1a1a';ctx.lineWidth=1.5;ctx.stroke();}
+  }
+  document.getElementById('sr-s1').textContent=N;
+  document.getElementById('sr-s2').textContent=n;
+  document.getElementById('sr-s3').textContent=(n/N*100).toFixed(1)+'%';
+  document.getElementById('sr-insight').textContent=t('สุ่มได้ '+n+' หน่วยจาก '+N+' — ทุกหน่วยมีโอกาส '+(n/N*100).toFixed(1)+'% เท่ากัน',n+' of '+N+' units drawn — every unit had equal '+(n/N*100).toFixed(1)+'% chance');
+}
+
+function updateSY(){ document.getElementById('sy-Nv').textContent=document.getElementById('sy-N').value; document.getElementById('sy-nv').textContent=document.getElementById('sy-n').value; drawSY(); }
+function drawSY(){
+  var N=parseInt(document.getElementById('sy-N').value),n=parseInt(document.getElementById('sy-n').value);
+  var k=Math.floor(N/n),start=Math.floor(Math.random()*k)+1;
+  document.getElementById('sy-kinfo').textContent='k = '+N+'/'+n+' = '+k+'  |  '+t('เริ่มที่','start')+' r = '+start;
+  var r=getCtx('cvs-systematic'),ctx=r.ctx,W=r.W,H=r.H; ctx.clearRect(0,0,W,H);
+  var pad=24,cols=Math.ceil(Math.sqrt(N*W/H)),cx=(W-pad*2)/cols,cy=(H-pad*2)/Math.ceil(N/cols),rd=Math.min(cx,cy)*0.35;
+  var sel={}; for(var i=start;i<=N;i+=k) sel[i]=1;
+  for(var i=1;i<=N;i++){
+    var col=(i-1)%cols,row=Math.floor((i-1)/cols),x=pad+col*cx+cx/2,y=pad+row*cy+cy/2;
+    ctx.beginPath();ctx.arc(x,y,rd,0,Math.PI*2);ctx.fillStyle=(i===start)?'#e8a020':sel[i]?'#1a1a1a':'#d8d8d8';ctx.fill();
+    if(sel[i]&&sel[i+k]){var nc=(i+k-1)%cols,nr=Math.floor((i+k-1)/cols),nx=pad+nc*cx+cx/2,ny=pad+nr*cy+cy/2;if(row===nr){ctx.beginPath();ctx.setLineDash([3,3]);ctx.moveTo(x+rd,y);ctx.lineTo(nx-rd,ny);ctx.strokeStyle='#aaa';ctx.lineWidth=1;ctx.stroke();ctx.setLineDash([]);}}
+  }
+  var cnt=Object.keys(sel).length;
+  document.getElementById('sy-s1').textContent=k; document.getElementById('sy-s2').textContent=start; document.getElementById('sy-s3').textContent=cnt;
+  document.getElementById('sy-insight').textContent=t('เริ่มที่หน่วย '+start+' → เลือกทุกๆ '+k+' → ได้ '+cnt+' หน่วย','Start unit '+start+' → every '+k+' → '+cnt+' units selected');
+}
+
+function drawST(){
+  var ns=parseInt(document.getElementById('st-strata').value),n=parseInt(document.getElementById('st-n').value),alloc=document.getElementById('st-alloc').value;
+  document.getElementById('st-nv').textContent=n;
+  var sizes=[40,30,20,10].slice(0,ns),total=sizes.reduce(function(a,b){return a+b;},0);
+  var r=getCtx('cvs-stratified'),ctx=r.ctx,W=r.W,H=r.H; ctx.clearRect(0,0,W,H);
+  var pad=8,sw=(W-pad*(ns+1))/ns,legend='',ntotal=0;
+  var names=currentLang==='en'?['Group A','Group B','Group C','Group D']:['กลุ่ม A','กลุ่ม B','กลุ่ม C','กลุ่ม D'];
+  for(var si=0;si<ns;si++){
+    var sz=sizes[si],x0=pad+si*(sw+pad),ni=alloc==='prop'?Math.round(n*sz/total):Math.floor(n/ns); ntotal+=ni;
+    ctx.fillStyle='#f5f5f5';ctx.strokeStyle=SC[si];ctx.lineWidth=2;ctx.beginPath();ctx.roundRect(x0,pad,sw,H-pad*2,6);ctx.fill();ctx.stroke();
+    ctx.fillStyle=SC[si];ctx.font='bold 13px IBM Plex Sans,sans-serif';ctx.textAlign='center';ctx.fillText(names[si],x0+sw/2,pad+16);
+    ctx.font='12px IBM Plex Sans,sans-serif';ctx.fillStyle='#888';ctx.fillText('N='+sz+'  n='+ni,x0+sw/2,pad+30);
+    var dc=Math.ceil(Math.sqrt(sz)),iW=sw-12,iH=H-pad*2-38,dcx=iW/dc,dcy=iH/Math.ceil(sz/dc),dr=Math.min(dcx,dcy)*0.3;
+    var sel={}; while(Object.keys(sel).length<Math.min(ni,sz)) sel[Math.floor(Math.random()*sz)]=1;
+    for(var i=0;i<sz;i++){var col=i%dc,row=Math.floor(i/dc),dx=x0+6+col*dcx+dcx/2,dy=pad+38+row*dcy+dcy/2;ctx.beginPath();ctx.arc(dx,dy,dr,0,Math.PI*2);ctx.fillStyle=sel[i]?SC[si]:'#ddd';ctx.fill();}
+    legend+='<div class="stratum-box"><div class="sbox" style="background:'+SC[si]+'"></div>'+names[si]+' (N='+sz+', n='+ni+')</div>';
+  }
+  document.getElementById('st-legend').innerHTML=legend;
+  document.getElementById('st-s1').textContent=ns; document.getElementById('st-s2').textContent=ntotal; document.getElementById('st-s3').textContent=alloc==='prop'?'Proportional':'Equal';
+  document.getElementById('st-insight').textContent=alloc==='prop'?t('Proportional: กลุ่มใหญ่ได้ n มากกว่า ตามสัดส่วน','Proportional: larger groups get more n'):t('Equal: สุ่มจาก strata ละเท่ากัน — กลุ่มเล็กถูก over-represent','Equal allocation — smaller strata are over-represented');
+}
+
+function drawCL(){
+  var total=parseInt(document.getElementById('cl-total').value),m=Math.min(parseInt(document.getElementById('cl-m').value),total);
+  document.getElementById('cl-totalv').textContent=total; document.getElementById('cl-mv').textContent=m;
+  var r=getCtx('cvs-cluster'),ctx=r.ctx,W=r.W,H=r.H; ctx.clearRect(0,0,W,H);
+  var cols=Math.ceil(Math.sqrt(total*W/H)),rows=Math.ceil(total/cols),pad=10,cw=(W-pad*(cols+1))/cols,ch=(H-pad*(rows+1))/rows;
+  var sel={}; while(Object.keys(sel).length<m) sel[Math.floor(Math.random()*total)]=1;
+  var dotN=6,totSel=0;
+  for(var ci=0;ci<total;ci++){
+    var col=ci%cols,row=Math.floor(ci/cols),x0=pad+col*(cw+pad),y0=pad+row*(ch+pad),ch2=sel[ci];
+    if(ch2)totSel+=dotN;
+    ctx.fillStyle=ch2?'#e8e8e8':'#f7f7f7';ctx.strokeStyle=ch2?'#1a1a1a':'#ccc';ctx.lineWidth=ch2?2:1;ctx.beginPath();ctx.roundRect(x0,y0,cw,ch,5);ctx.fill();ctx.stroke();
+    if(ch2){ctx.fillStyle='#1a1a1a';ctx.font='bold 11px sans-serif';ctx.textAlign='center';ctx.fillText('✓',x0+cw/2,y0+13);}
+    var dr=Math.min(cw,ch)*0.09;
+    for(var d=0;d<dotN;d++){var dc=d%3,dr2=Math.floor(d/3),dx=x0+8+dc*(cw-16)/2.2,dy=y0+18+dr2*(ch-24)/1.5;ctx.beginPath();ctx.arc(dx,dy,dr,0,Math.PI*2);ctx.fillStyle=ch2?'#1a1a1a':'#bbb';ctx.fill();}
+  }
+  document.getElementById('cl-s1').textContent=total; document.getElementById('cl-s2').textContent=m; document.getElementById('cl-s3').textContent=totSel;
+  document.getElementById('cl-insight').textContent=t('เลือก '+m+' cluster จาก '+total+' → เก็บทุกหน่วย → n = '+totSel+' หน่วย','Selected '+m+' of '+total+' clusters → collected all units → n = '+totSel);
+}
+
+function drawCV(){
+  var n=parseInt(document.getElementById('cv-n').value),zone=document.getElementById('cv-zone').value;
+  document.getElementById('cv-nv').textContent=n;
+  var r=getCtx('cvs-convenience'),ctx=r.ctx,W=r.W,H=r.H; ctx.clearRect(0,0,W,H);
+  var N=80,pad=20,pts=[];
+  for(var i=0;i<N;i++) pts.push({x:pad+Math.random()*(W-pad*2),y:pad+Math.random()*(H-pad*2)});
+  var zx,zy,zw,zh;
+  if(zone==='corner'){zx=W*.55;zy=H*.55;zw=W*.38;zh=H*.38;}
+  else if(zone==='center'){zx=W*.25;zy=H*.25;zw=W*.5;zh=H*.5;}
+  else{zx=pad;zy=pad;zw=W-pad*2;zh=H*.25;}
+  ctx.fillStyle='rgba(232,64,64,0.06)';ctx.strokeStyle='#e84040';ctx.lineWidth=1.5;ctx.setLineDash([5,4]);ctx.fillRect(zx,zy,zw,zh);ctx.strokeRect(zx,zy,zw,zh);ctx.setLineDash([]);
+  ctx.fillStyle='#e84040';ctx.font='13px sans-serif';ctx.textAlign='left';ctx.fillText(t('โซนที่เข้าถึงได้','Accessible zone'),zx+6,zy+14);
+  var inside=pts.filter(function(p){return p.x>=zx&&p.x<=zx+zw&&p.y>=zy&&p.y<=zy+zh;}),chosen=inside.slice(0,n);
+  pts.forEach(function(p){var s=chosen.indexOf(p)>=0;ctx.beginPath();ctx.arc(p.x,p.y,5,0,Math.PI*2);ctx.fillStyle=s?'#1a1a1a':'#ccc';ctx.fill();if(s){ctx.strokeStyle='#1a1a1a';ctx.lineWidth=1.2;ctx.stroke();}});
+  var zl=t(zone==='corner'?'มุมล่างขวา':zone==='center'?'กลางห้อง':'แถวหน้า',zone==='corner'?'Bottom-right':zone==='center'?'Center':'Front rows');
+  document.getElementById('cv-s1').textContent=chosen.length; document.getElementById('cv-s2').textContent=(chosen.length/N*100).toFixed(0)+'%'; document.getElementById('cv-s3').textContent=zl;
+  document.getElementById('cv-insight').textContent=t('หน่วยนอกโซน ('+(N-inside.length)+' หน่วย) ไม่มีโอกาสถูกเลือกเลย — นี่คือ Selection Bias',(N-inside.length)+' units outside zone have zero chance — this is Selection Bias');
+}
+
+function drawPU(){
+  var crit=document.getElementById('pu-crit').value;
+  var r=getCtx('cvs-purposive'),ctx=r.ctx,W=r.W,H=r.H; ctx.clearRect(0,0,W,H);
+  var N=70,pad=20,pts=[];
+  for(var i=0;i<N;i++) pts.push({x:pad+Math.random()*(W-pad*2),y:pad+Math.random()*(H-pad*2),sz:3+Math.random()*8,expert:Math.random()<.2,specific:Math.random()<.25});
+  var sel=crit==='expert'?pts.filter(function(p){return p.expert;}):crit==='senior'?pts.filter(function(p){return p.sz>8;}):pts.filter(function(p){return p.specific;});
+  pts.forEach(function(p){
+    var s=sel.indexOf(p)>=0,rd=crit==='senior'?p.sz/2:6;
+    ctx.beginPath();if(crit==='expert'&&s){drawStar(ctx,p.x,p.y,9,5);}else{ctx.arc(p.x,p.y,rd,0,Math.PI*2);}
+    ctx.fillStyle=s?'#1a1a1a':'#ccc';ctx.fill();
+  });
+  var lbl=t(crit==='expert'?'ผู้เชี่ยวชาญ (★)':crit==='senior'?'อาวุโส (วงใหญ่)':'กลุ่มเฉพาะ',crit==='expert'?'Experts (★)':crit==='senior'?'Senior (large)':'Specific group');
+  document.getElementById('pu-s1').textContent=sel.length; document.getElementById('pu-s2').textContent=N-sel.length; document.getElementById('pu-s3').textContent=(sel.length/N*100).toFixed(0)+'%';
+  document.getElementById('pu-insight').textContent=t('เกณฑ์: '+lbl+' → เลือกได้ '+sel.length+' จาก '+N+' — ขึ้นกับนิยามของผู้วิจัย','Criterion: '+lbl+' → '+sel.length+' of '+N+' qualify — depends on researcher\'s definition');
+}
+function drawStar(ctx,cx,cy,r,pts){ctx.beginPath();for(var i=0;i<pts*2;i++){var a=(i*Math.PI)/pts-Math.PI/2,rd=i%2===0?r:r*.4;i===0?ctx.moveTo(cx+rd*Math.cos(a),cy+rd*Math.sin(a)):ctx.lineTo(cx+rd*Math.cos(a),cy+rd*Math.sin(a));}ctx.closePath();}
+
+function drawQU(){
+  var qm=parseInt(document.getElementById('qu-m').value),qf=parseInt(document.getElementById('qu-f').value);
+  document.getElementById('qu-mv').textContent=qm; document.getElementById('qu-fv').textContent=qf;
+  var r=getCtx('cvs-quota'),ctx=r.ctx,W=r.W,H=r.H; ctx.clearRect(0,0,W,H);
+  var N=80,pad=20,pop=[];
+  for(var i=0;i<N;i++) pop.push({x:pad+Math.random()*(W-pad*2),y:pad+Math.random()*(H-pad*2),male:i<N/2,order:Math.random()});
+  pop.sort(function(a,b){return a.order-b.order;});
+  var mc=0,fc=0;
+  pop.forEach(function(p){var q=p.male?mc<qm:fc<qf;if(q){p.male?mc++:fc++;}p.selected=q;});
+  pop.forEach(function(p){ctx.beginPath();ctx.arc(p.x,p.y,6,0,Math.PI*2);ctx.fillStyle=p.male?(p.selected?'#1a1a1a':'#90c0ff'):(p.selected?'#888':'#ffb0c8');ctx.fill();if(p.selected){ctx.strokeStyle=p.male?'#1a1a1a':'#888';ctx.lineWidth=1.5;ctx.stroke();}});
+  document.getElementById('qu-s1').textContent=mc; document.getElementById('qu-s2').textContent=fc; document.getElementById('qu-s3').textContent=qm+qf;
+  document.getElementById('qu-insight').textContent=t('โควตาชาย '+qm+' + หญิง '+qf+' = '+(qm+qf)+' — แต่ "ใคร" ขึ้นกับผู้สัมภาษณ์ ไม่ใช่การสุ่ม','Male '+qm+' + Female '+qf+' = '+(qm+qf)+' — but "who" is chosen by the interviewer, not randomly');
+}
+
+function drawSB(){
+  var seedN=parseInt(document.getElementById('sb-seed').value),rounds=parseInt(document.getElementById('sb-rounds').value),ref=parseInt(document.getElementById('sb-ref').value);
+  document.getElementById('sb-seedv').textContent=seedN; document.getElementById('sb-roundsv').textContent=rounds; document.getElementById('sb-refv').textContent=ref;
+  var r=getCtx('cvs-snowball'),ctx=r.ctx,W=r.W,H=r.H; ctx.clearRect(0,0,W,H);
+  var N=60,pad=24,pts=[];
+  for(var i=0;i<N;i++) pts.push({x:pad+Math.random()*(W-pad*2),y:pad+Math.random()*(H-pad*2),round:-1});
+  var seeds=[];
+  while(seeds.length<seedN){var idx=Math.floor(Math.random()*N);if(seeds.indexOf(idx)<0){seeds.push(idx);pts[idx].round=0;}}
+  var frontier=seeds.slice();
+  for(var rnd=1;rnd<=rounds;rnd++){
+    var next=[];
+    frontier.forEach(function(fi){
+      var un=[];for(var i=0;i<pts.length;i++){if(pts[i].round===-1)un.push({i:i,d:Math.hypot(pts[i].x-pts[fi].x,pts[i].y-pts[fi].y)});}
+      un.sort(function(a,b){return a.d-b.d;});
+      un.slice(0,ref).forEach(function(o){pts[o.i].round=rnd;next.push(o.i);ctx.beginPath();ctx.moveTo(pts[fi].x,pts[fi].y);ctx.lineTo(pts[o.i].x,pts[o.i].y);ctx.strokeStyle='rgba(0,0,0,'+(0.12+0.08/rnd)+')';ctx.lineWidth=1;ctx.stroke();});
+    });
+    frontier=next;
+  }
+  pts.forEach(function(p){ctx.beginPath();ctx.arc(p.x,p.y,p.round===0?9:6,0,Math.PI*2);ctx.fillStyle=p.round===0?'#e84040':p.round===1?'#1a1a1a':p.round===2?'#666':p.round>=3?'#aaa':'#ddd';ctx.fill();if(p.round===0){ctx.strokeStyle='#e84040';ctx.lineWidth=2;ctx.stroke();}});
+  var reached=pts.filter(function(p){return p.round>=0;}).length;
+  document.getElementById('sb-s1').textContent=seedN; document.getElementById('sb-s2').textContent=reached; document.getElementById('sb-s3').textContent=(reached/N*100).toFixed(0)+'%';
+  document.getElementById('sb-insight').textContent=t('จาก '+seedN+' seed → '+rounds+' รอบ → เข้าถึง '+reached+'/'+N+' — ที่เหลืออาจไม่ถูกเลือกเลย','From '+seedN+' seed(s) → '+rounds+' round(s) → reached '+reached+'/'+N+' — rest may never be accessed');
+}
+
+window.addEventListener('load',function(){drawSR();});
+window.addEventListener('resize',function(){var a=document.querySelector('.tab-section.active');if(a)redrawAll(a.id.replace('tab-',''));});
+</script>
+</body>
+</html>

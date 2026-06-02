@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Normal Distribution Simulator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;600;700;800&family=IBM+Plex+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: "Noto Sans Thai","IBM Plex Sans",sans-serif; font-size: 19px; font-weight: 600; background: #f5f5f5; color: #1a1a1a; min-height: 100vh; }
+.header { background: #fff; border-bottom: 3px solid #1a1a1a; padding: 16px 32px; display: flex; align-items: center; justify-content: space-between; }
+.header-left { display: flex; align-items: baseline; gap: 14px; }
+.header h1 { font-size: 28px; font-weight: 800; }
+.header span { font-size: 20px; font-weight: 600; color: #555; }
+
+.home-btn { text-decoration: none; color: #6c757d; font-size: 15px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border: 1px solid #dee2e6; border-radius: 6px; background: #fff; transition: all 0.2s; flex-shrink: 0; }
+.home-btn:hover { background: #f8f9fa; color: #0d6efd; }
+
+.lang-toggle { display: flex; border: 2px solid #1a1a1a; border-radius: 8px; overflow: hidden; }
+.lang-btn { font-family: inherit; font-size: 16px; font-weight: 700; padding: 6px 16px; border: none; cursor: pointer; background: #fff; color: #888; transition: all .12s; }
+.lang-btn.active { background: #1a1a1a; color: #fff; }
+
+.main { max-width: 980px; margin: 28px auto; padding: 0 24px; }
+.card { background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 20px; margin-bottom: 16px; }
+.card-title { font-size: 21px; font-weight: 800; margin-bottom: 14px; border-bottom: 1px solid #eee; padding-bottom: 8px; }
+.slider-group { margin-bottom: 18px; }
+.slider-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px; }
+.slider-name { font-size: 17px; font-weight: 600; }
+.slider-val { font-size: 24px; font-weight: 800; min-width: 48px; text-align: right; }
+input[type=range] { width: 100%; accent-color: #1a1a1a; cursor: pointer; }
+.slider-ticks { display: flex; justify-content: space-between; font-size: 14px; font-weight: 600; color: #999; margin-top: 2px; }
+.mode-group { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+.mode-btn { font-family: inherit; font-size: 16px; font-weight: 700; padding: 5px 14px; border: 1.5px solid #bbb; border-radius: 20px; background: #fff; cursor: pointer; transition: all .12s; }
+.mode-btn.active { background: #1a1a1a; color: #fff; border-color: #1a1a1a; }
+.x-row { display: flex; align-items: center; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+.x-row label { font-size: 17px; font-weight: 600; }
+.x-row input[type=number] { font-family: inherit; font-size: 18px; font-weight: 700; padding: 5px 8px; border: 1.5px solid #bbb; border-radius: 6px; width: 90px; }
+.result-chip { font-size: 18px; font-weight: 800; background: #f0f0f0; border: 1px solid #ddd; border-radius: 6px; padding: 5px 12px; }
+canvas { width: 100%; display: block; border-radius: 4px; }
+.stat-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 10px; margin-top: 12px; }
+.stat { background: #f7f7f7; border: 1px solid #e0e0e0; border-radius: 6px; padding: 10px; text-align: center; }
+.stat-val { font-size: 26px; font-weight: 800; }
+.stat-lbl { font-size: 15px; font-weight: 600; color: #666; margin-top: 2px; }
+.questions { display: flex; flex-wrap: wrap; gap: 8px; }
+.q-chip { font-size: 17px; font-weight: 600; padding: 5px 14px; border: 1px solid #bbb; border-radius: 20px; color: #444; background: #fafafa; }
+.rule-row { display: flex; gap: 8px; margin-top: 12px; }
+.rule-box { flex: 1; border: 1px solid #ddd; border-radius: 6px; padding: 8px; text-align: center; }
+.rule-pct { font-size: 18px; font-weight: 800; }
+.rule-range { font-size: 15px; font-weight: 600; color: #555; margin-top: 3px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-left">
+    <a href="index.html" class="home-btn" data-th="← หน้าแรก" data-en="← Home">← Home</a>
+    <h1 data-th="โค้งระฆัง — Normal Distribution" data-en="Bell Curve — Normal Distribution">โค้งระฆัง — Normal Distribution</h1>
+  </div>
+  <div class="lang-toggle">
+    <button class="lang-btn active" onclick="setLang('th')">TH</button>
+    <button class="lang-btn" onclick="setLang('en')">EN</button>
+  </div>
+</div>
+
+<div class="main">
+  <div style="display:grid;grid-template-columns:310px 1fr;gap:20px">
+    <div>
+      <div class="card">
+        <div class="card-title" data-th="ปรับพารามิเตอร์" data-en="Adjust Parameters">ปรับพารามิเตอร์</div>
+
+        <div class="slider-group">
+          <div class="slider-header">
+            <span class="slider-name" data-th="ค่าเฉลี่ย <b>μ</b> — เลื่อนพิกัด" data-en="Mean <b>μ</b> — shift location">ค่าเฉลี่ย <b>μ</b> — เลื่อนพิกัด</span>
+            <span class="slider-val" id="muVal">170</span>
+          </div>
+          <input type="range" id="mu" min="140" max="200" value="170" step="1" oninput="scheduleUpdate()">
+          <div class="slider-ticks"><span>140</span><span>170</span><span>200</span></div>
+        </div>
+
+        <div class="slider-group">
+          <div class="slider-header">
+            <span class="slider-name" data-th="ส่วนเบี่ยงเบน <b>σ</b> — ขยายสเกล" data-en="Standard Dev <b>σ</b> — shift scale">ส่วนเบี่ยงเบน <b>σ</b> — ขยายสเกล</span>
+            <span class="slider-val" id="sdVal">6</span>
+          </div>
+          <input type="range" id="sd" min="1" max="20" value="6" step="0.5" oninput="scheduleUpdate()">
+          <div class="slider-ticks"><span>1</span><span>10</span><span>20</span></div>
+        </div>
+
+        <div style="font-size:15px;font-weight:700;margin-bottom:8px" data-th="โหมดแสดงพื้นที่" data-en="Area Display Mode">โหมดแสดงพื้นที่</div>
+        <div class="mode-group">
+          <button class="mode-btn active" onclick="setMode('none',this)" data-th="โค้งเปล่า" data-en="Empty Curve">โค้งเปล่า</button>
+          <button class="mode-btn" onclick="setMode('left',this)">P(X &le; x)</button>
+          <button class="mode-btn" onclick="setMode('right',this)">P(X &ge; x)</button>
+          <button class="mode-btn" onclick="setMode('between',this)">P(a &le; X &le; b)</button>
+          <button class="mode-btn" onclick="setMode('rule',this)">68-95-99.7</button>
+        </div>
+
+        <div id="xArea" style="display:none">
+          <div class="x-row">
+            <label id="xLbl">x =</label>
+            <input type="number" id="xv1" value="176" step="1" oninput="scheduleUpdate()">
+          </div>
+          <div class="x-row" id="xRow2" style="display:none">
+            <label>b =</label>
+            <input type="number" id="xv2" value="182" step="1" oninput="scheduleUpdate()">
+          </div>
+          <div class="x-row" style="margin-top:8px">
+            <span style="font-size:15px;font-weight:600">P =</span>
+            <span class="result-chip" id="pResult">&#8212;</span>
+            <span style="font-size:15px;font-weight:600">Z =</span>
+            <span class="result-chip" id="zResult">&#8212;</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title" data-th="คำถามชวนคิด" data-en="Discussion Questions">คำถามชวนคิด</div>
+        <div class="questions">
+          <div class="q-chip" data-th="เมื่อ μ เปลี่ยน โค้งขยับไปทางไหน?" data-en="When μ changes, which way does the curve shift?">เมื่อ μ เปลี่ยน โค้งขยับไปทางไหน?</div>
+          <div class="q-chip" data-th="σ ใหญ่ขึ้น โค้งแบนลงหรือสูงขึ้น?" data-en="As σ increases, does the curve flatten or get taller?">σ ใหญ่ขึ้น โค้งแบนลงหรือสูงขึ้น?</div>
+          <div class="q-chip" data-th="พื้นที่ใต้โค้งรวมเปลี่ยนไหม?" data-en="Does the total area under the curve change?">พื้นที่ใต้โค้งรวมเปลี่ยนไหม?</div>
+          <div class="q-chip" data-th="Z-score คืออะไร?" data-en="What exactly is a Z-score?">Z-score คืออะไร?</div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="card">
+        <div class="card-title">
+          <span data-th="กราฟการแจกแจง" data-en="Distribution Graph">กราฟการแจกแจง</span> 
+          <span style="font-size:13px;font-weight:600;color:#888" data-th="(แกน x คงที่ — เห็นการเคลื่อนที่จริง)" data-en="(Fixed x-axis — observe actual movement)">(แกน x คงที่ — เห็นการเคลื่อนที่จริง)</span>
+        </div>
+        <canvas id="cvs" height="300"></canvas>
+        <div class="stat-grid">
+          <div class="stat"><div class="stat-val" id="sMu">170</div><div class="stat-lbl" data-th="μ (ค่าเฉลี่ย)" data-en="μ (Mean)">μ (ค่าเฉลี่ย)</div></div>
+          <div class="stat"><div class="stat-val" id="sSd">6</div><div class="stat-lbl" data-th="σ (ส่วนเบี่ยงเบน)" data-en="σ (Std Dev)">σ (ส่วนเบี่ยงเบน)</div></div>
+          <div class="stat"><div class="stat-val" id="sVar">36</div><div class="stat-lbl" data-th="σ² (ความแปรปรวน)" data-en="σ² (Variance)">σ² (ความแปรปรวน)</div></div>
+          <div class="stat"><div class="stat-val" id="sCv">3.5%</div><div class="stat-lbl">CV</div></div>
+        </div>
+        <div id="rulePanel" style="display:none">
+          <div class="rule-row">
+            <div class="rule-box"><div class="rule-pct">68%</div><div class="rule-range" id="r1"></div></div>
+            <div class="rule-box"><div class="rule-pct">95%</div><div class="rule-range" id="r2"></div></div>
+            <div class="rule-box"><div class="rule-pct">99.7%</div><div class="rule-range" id="r3"></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// Language Control
+var currentLang = 'th';
+
+function setLang(lang) {
+  currentLang = lang;
+  
+  // Update Buttons
+  document.querySelectorAll('.lang-btn').forEach(function(b) {
+    b.classList.toggle('active', b.textContent.trim().toLowerCase() === lang);
+  });
+  
+  // Update Data Attributes (Using innerHTML to support <b> tags in sliders)
+  document.querySelectorAll('[data-th]').forEach(function(el) {
+    var val = el.getAttribute('data-' + lang);
+    if (val) el.innerHTML = val;
+  });
+
+  // Redraw canvas to update any language specific changes if needed
+  if(rafId === null) draw(animMu, animSd);
+}
+
+const XMIN=100,XMAX=240;
+let mode='none',animMu=170,animSd=6,targetMu=170,targetSd=6,rafId=null;
+function pdf(x,mu,sd){return Math.exp(-0.5*((x-mu)/sd)**2)/(sd*Math.sqrt(2*Math.PI));}
+function erf(z){const t=1/(1+0.3275911*Math.abs(z));const p=t*(0.254829592+t*(-0.284496736+t*(1.421413741+t*(-1.453152027+t*1.061405429))));const v=1-p*Math.exp(-z*z);return z>=0?v:-v;}
+function cdf(x,mu,sd){return 0.5*(1+erf((x-mu)/(sd*Math.sqrt(2))));}
+function scheduleUpdate(){targetMu=parseFloat(document.getElementById('mu').value);targetSd=parseFloat(document.getElementById('sd').value);document.getElementById('muVal').textContent=targetMu;document.getElementById('sdVal').textContent=targetSd;if(!rafId)rafId=requestAnimationFrame(animate);}
+function animate(){const SPEED=0.18,dMu=targetMu-animMu,dSd=targetSd-animSd;if(Math.abs(dMu)<0.05&&Math.abs(dSd)<0.02){animMu=targetMu;animSd=targetSd;rafId=null;draw(animMu,animSd);updateInfo(animMu,animSd);return;}animMu+=dMu*SPEED;animSd+=dSd*SPEED;draw(animMu,animSd);rafId=requestAnimationFrame(animate);}
+function draw(mu,sd){
+  const cvs=document.getElementById('cvs'),DPR=window.devicePixelRatio||1,W=cvs.offsetWidth,H=300;
+  cvs.width=W*DPR;cvs.height=H*DPR;const ctx=cvs.getContext('2d');ctx.scale(DPR,DPR);
+  const pad={top:24,bottom:44,left:36,right:16},cw=W-pad.left-pad.right,ch=H-pad.top-pad.bottom;
+  const toX=v=>pad.left+(v-XMIN)/(XMAX-XMIN)*cw,maxPDF=pdf(0,0,1),toY=v=>pad.top+ch-(v/maxPDF)*ch*0.92;
+  ctx.clearRect(0,0,W,H);
+  ctx.strokeStyle='#eee';ctx.lineWidth=1;
+  [0.1,0.2,0.3].forEach(v=>{const py=toY(v);ctx.beginPath();ctx.moveTo(pad.left,py);ctx.lineTo(W-pad.right,py);ctx.stroke();ctx.fillStyle='#ccc';ctx.font='14px Noto Sans Thai,sans-serif';ctx.textAlign='right';ctx.fillText(v.toFixed(2),pad.left-4,py+3);});
+  function shadeRegion(x1,x2,alpha){const steps=200;ctx.beginPath();ctx.moveTo(toX(x1),toY(0));for(let i=0;i<=steps;i++){const x=x1+i*(x2-x1)/steps;ctx.lineTo(toX(x),toY(pdf(x,mu,sd)));}ctx.lineTo(toX(x2),toY(0));ctx.closePath();ctx.fillStyle='rgba(0,0,0,'+alpha+')';ctx.fill();}
+  const x1val=parseFloat(document.getElementById('xv1').value)||mu,x2val=parseFloat(document.getElementById('xv2').value)||mu+sd;
+  if(mode==='left')shadeRegion(XMIN,Math.min(x1val,XMAX),0.15);
+  if(mode==='right')shadeRegion(Math.max(x1val,XMIN),XMAX,0.15);
+  if(mode==='between')shadeRegion(Math.max(x1val,XMIN),Math.min(x2val,XMAX),0.15);
+  if(mode==='rule'){shadeRegion(mu-sd,mu+sd,0.22);shadeRegion(mu-2*sd,mu-sd,0.11);shadeRegion(mu+sd,mu+2*sd,0.11);shadeRegion(mu-3*sd,mu-2*sd,0.05);shadeRegion(mu+2*sd,mu+3*sd,0.05);}
+  ctx.beginPath();for(let i=0;i<=500;i++){const x=XMIN+i*(XMAX-XMIN)/500,px=toX(x),py=toY(pdf(x,mu,sd));i===0?ctx.moveTo(px,py):ctx.lineTo(px,py);}ctx.strokeStyle='#1a1a1a';ctx.lineWidth=2.5;ctx.stroke();
+  ctx.beginPath();ctx.setLineDash([5,4]);ctx.moveTo(toX(mu),pad.top);ctx.lineTo(toX(mu),toY(0));ctx.strokeStyle='#aaa';ctx.lineWidth=1.2;ctx.stroke();ctx.setLineDash([]);
+  ctx.strokeStyle='#888';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(pad.left,toY(0));ctx.lineTo(W-pad.right,toY(0));ctx.stroke();
+  ctx.fillStyle='#555';ctx.textAlign='center';ctx.font='15px Noto Sans Thai,sans-serif';
+  for(let v=110;v<=230;v+=10){const px=toX(v);ctx.beginPath();ctx.moveTo(px,toY(0));ctx.lineTo(px,toY(0)+5);ctx.strokeStyle='#888';ctx.lineWidth=1;ctx.stroke();ctx.fillStyle='#555';ctx.fillText(v,px,toY(0)+17);}
+  ctx.fillStyle='#1a1a1a';ctx.font='bold 16px Noto Sans Thai,sans-serif';ctx.textAlign='center';ctx.fillText('μ = '+mu.toFixed(1),toX(mu),pad.top-8);
+  if(mode==='rule'||mode==='none'){[-1,1].forEach(s=>{const x=mu+s*sd;if(x<XMIN||x>XMAX)return;ctx.beginPath();ctx.setLineDash([3,3]);ctx.moveTo(toX(x),pad.top+8);ctx.lineTo(toX(x),toY(0));ctx.strokeStyle='#bbb';ctx.lineWidth=1;ctx.stroke();ctx.setLineDash([]);ctx.fillStyle='#999';ctx.font='15px Noto Sans Thai,sans-serif';ctx.textAlign='center';ctx.fillText((s>0?'+':'-')+'σ',toX(x),pad.top+6);});}
+  if(mode==='left'||mode==='right'){const px=toX(x1val);if(px>=pad.left&&px<=W-pad.right){ctx.beginPath();ctx.moveTo(px,toY(0));ctx.lineTo(px,toY(pdf(x1val,mu,sd)));ctx.strokeStyle='#555';ctx.lineWidth=1.5;ctx.stroke();}}
+}
+function updateInfo(mu,sd){
+  document.getElementById('sMu').textContent=mu.toFixed(1);document.getElementById('sSd').textContent=sd.toFixed(1);document.getElementById('sVar').textContent=(sd*sd).toFixed(1);document.getElementById('sCv').textContent=(sd/mu*100).toFixed(1)+'%';
+  if(mode==='rule'){document.getElementById('r1').textContent=(mu-sd).toFixed(1)+' - '+(mu+sd).toFixed(1);document.getElementById('r2').textContent=(mu-2*sd).toFixed(1)+' - '+(mu+2*sd).toFixed(1);document.getElementById('r3').textContent=(mu-3*sd).toFixed(1)+' - '+(mu+3*sd).toFixed(1);}
+  if(mode==='left'||mode==='right'){const x1=parseFloat(document.getElementById('xv1').value)||mu,z=(x1-mu)/sd,prob=mode==='left'?cdf(x1,mu,sd):1-cdf(x1,mu,sd);document.getElementById('pResult').textContent=prob.toFixed(4);document.getElementById('zResult').textContent=z.toFixed(3);}
+  if(mode==='between'){const a=parseFloat(document.getElementById('xv1').value)||mu-sd,b=parseFloat(document.getElementById('xv2').value)||mu+sd,prob=cdf(b,mu,sd)-cdf(a,mu,sd);document.getElementById('pResult').textContent=prob.toFixed(4);document.getElementById('zResult').textContent=((a-mu)/sd).toFixed(2)+' - '+((b-mu)/sd).toFixed(2);}
+}
+function setMode(m,btn){mode=m;document.querySelectorAll('.mode-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');document.getElementById('xArea').style.display=(m==='left'||m==='right'||m==='between')?'block':'none';document.getElementById('xRow2').style.display=m==='between'?'flex':'none';document.getElementById('xLbl').textContent=m==='between'?'a =':'x =';document.getElementById('rulePanel').style.display=m==='rule'?'block':'none';scheduleUpdate();}
+
+// Init
+setLang('th');
+scheduleUpdate();
+window.addEventListener('resize',()=>draw(animMu,animSd));
+</script>
+</body>
+</html>

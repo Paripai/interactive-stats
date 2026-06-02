@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Linear Regression & Correlation Simulator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;600;700;800&family=IBM+Plex+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: "Noto Sans Thai","IBM Plex Sans",sans-serif; font-size: 18px; font-weight: 600; background: #f5f5f5; color: #1a1a1a; min-height: 100vh; }
+
+.header { background: #fff; border-bottom: 3px solid #1a1a1a; padding: 16px 32px; display: flex; align-items: center; justify-content: space-between; }
+.header-left { display: flex; align-items: baseline; gap: 14px; }
+.header h1 { font-size: 28px; font-weight: 800; }
+.header span { font-size: 20px; font-weight: 600; color: #555; }
+
+.home-btn { text-decoration: none; color: #6c757d; font-size: 15px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border: 1px solid #dee2e6; border-radius: 6px; background: #fff; transition: all 0.2s; flex-shrink: 0; }
+.home-btn:hover { background: #f8f9fa; color: #0d6efd; }
+
+.lang-toggle { display: flex; border: 2px solid #1a1a1a; border-radius: 8px; overflow: hidden; }
+.lang-btn { font-family: inherit; font-size: 16px; font-weight: 700; padding: 6px 16px; border: none; cursor: pointer; background: #fff; color: #888; transition: all .12s; }
+.lang-btn.active { background: #1a1a1a; color: #fff; }
+
+.main { max-width: 1100px; margin: 24px auto; padding: 0 24px; }
+.card { background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 20px; margin-bottom: 16px; }
+.card-title { font-size: 20px; font-weight: 800; margin-bottom: 14px; border-bottom: 1px solid #eee; padding-bottom: 8px; }
+
+/* Layout */
+.layout { display: grid; grid-template-columns: 320px 1fr; gap: 20px; }
+@media (max-width: 850px) { .layout { grid-template-columns: 1fr; } }
+
+/* Controls */
+.btn { font-family: inherit; font-size: 16px; font-weight: 700; padding: 10px 16px; border-radius: 6px; border: 1.5px solid #1a1a1a; background: #1a1a1a; color: #fff; cursor: pointer; transition: background .12s; width: 100%; margin-bottom: 8px; }
+.btn:hover { background: #333; }
+.btn-sec { background: #fff; color: #1a1a1a; }
+.btn-sec:hover { background: #f0f0f0; }
+.btn-danger { background: #fff5f5; border-color: #ff6b6b; color: #e03131; }
+.btn-danger:hover { background: #ffe3e3; }
+
+/* Toggles */
+.toggle-row { display: flex; align-items: center; gap: 10px; margin-top: 12px; cursor: pointer; padding: 8px 12px; background: #f8f9fa; border-radius: 6px; border: 1px solid #e9ecef; }
+.toggle-row:hover { background: #e9ecef; }
+.toggle-row input[type="checkbox"] { width: 18px; height: 18px; accent-color: #1a1a1a; cursor: pointer; }
+.toggle-label { font-size: 15px; font-weight: 700; cursor: pointer; user-select: none; flex: 1; }
+
+/* Equation Box */
+.eq-box { background: #1a1a1a; color: #fff; border-radius: 6px; padding: 16px; text-align: center; margin-bottom: 16px; }
+.eq-title { font-size: 14px; color: #adb5bd; font-weight: 600; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 1px; }
+.eq-val { font-size: 24px; font-weight: 800; font-family: "IBM Plex Sans", sans-serif; letter-spacing: 0.5px; }
+
+/* Canvas */
+.canvas-container { position: relative; width: 100%; background: #fcfcfc; border: 2px solid #ddd; border-radius: 6px; overflow: hidden; cursor: crosshair; }
+canvas { display: block; width: 100%; height: 400px; }
+.canvas-overlay-text { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #bbb; font-size: 24px; font-weight: 700; pointer-events: none; text-align: center; line-height: 1.4; transition: opacity 0.3s; }
+
+/* Stats & Legends */
+.stat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 16px; }
+.stat { background: #f8f9fa; border: 1px solid #e0e0e0; border-radius: 6px; padding: 12px; text-align: center; }
+.stat-val { font-size: 24px; font-weight: 800; font-family: "IBM Plex Sans", sans-serif; }
+.stat-lbl { font-size: 14px; font-weight: 600; color: #666; margin-top: 2px; }
+
+.legend { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 12px; justify-content: center; }
+.legend-item { display: flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 600; color: #555; }
+
+.insight { font-size: 16px; font-weight: 600; color: #333; background: #f8f9fa; border-left: 4px solid #0d6efd; padding: 12px 16px; border-radius: 0 6px 6px 0; margin-top: 16px; line-height: 1.5; }
+
+.questions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.q-chip { font-size: 15px; font-weight: 600; padding: 6px 14px; border: 1px solid #bbb; border-radius: 20px; color: #444; background: #fafafa; line-height: 1.4; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-left">
+    <a href="index.html" class="home-btn" data-th="← หน้าแรก" data-en="← Home">← Home</a>
+    <h1>Linear Regression</h1>
+  </div>
+  <div class="lang-toggle">
+    <button class="lang-btn active" onclick="setLang('th')">TH</button>
+    <button class="lang-btn" onclick="setLang('en')">EN</button>
+  </div>
+</div>
+
+<div class="main">
+  <div class="layout">
+    
+    <div>
+      <div class="card">
+        <div class="card-title" data-th="สมการพยากรณ์" data-en="Regression Equation">สมการพยากรณ์</div>
+        
+        <div class="eq-box">
+          <div class="eq-title">Y = a + bX</div>
+          <div class="eq-val" id="eqDisplay">Y = 0.00 + 0.00X</div>
+        </div>
+
+        <button class="btn" onclick="generateRandomData()" data-th="สุ่มข้อมูลใหม่ (Random)" data-en="Generate Random Data">สุ่มข้อมูลใหม่ (Random)</button>
+        <button class="btn btn-sec" onclick="generateTrend('positive')" data-th="สร้างแนวโน้มเชิงบวก" data-en="Generate Positive Trend">สร้างแนวโน้มเชิงบวก</button>
+        <button class="btn btn-sec" onclick="generateTrend('negative')" data-th="สร้างแนวโน้มเชิงลบ" data-en="Generate Negative Trend">สร้างแนวโน้มเชิงลบ</button>
+        <button class="btn btn-danger" onclick="clearData()" style="margin-top: 12px;" data-th="ลบข้อมูลทั้งหมด" data-en="Clear All Points">ลบข้อมูลทั้งหมด</button>
+
+        <hr style="border: 0; border-top: 1px solid #eee; margin: 16px 0;">
+
+        <div style="font-size: 15px; font-weight: 700; color: #444; margin-bottom: 8px;" data-th="เครื่องมือวิเคราะห์ (Analysis Tools)" data-en="Analysis Tools">เครื่องมือวิเคราะห์ (Analysis Tools)</div>
+        
+        <label class="toggle-row">
+          <input type="checkbox" id="showLine" onchange="draw()" checked>
+          <span class="toggle-label" data-th="แสดงเส้น Regression (Line of Best Fit)" data-en="Show Regression Line (Best Fit)">แสดงเส้น Regression (Line of Best Fit)</span>
+        </label>
+        
+        <label class="toggle-row">
+          <input type="checkbox" id="showResiduals" onchange="draw()">
+          <span class="toggle-label" data-th="แสดงความคลาดเคลื่อน (Residuals)" data-en="Show Residual Errors">แสดงความคลาดเคลื่อน (Residuals)</span>
+        </label>
+        
+        <label class="toggle-row">
+          <input type="checkbox" id="showMeans" onchange="draw()">
+          <span class="toggle-label" data-th="แสดงเส้นค่าเฉลี่ย (x̄, ȳ)" data-en="Show Mean Lines (x̄, ȳ)">แสดงเส้นค่าเฉลี่ย (x̄, ȳ)</span>
+        </label>
+      </div>
+
+      <div class="card">
+        <div class="card-title" data-th="คำถามชวนคิด" data-en="Discussion Questions">คำถามชวนคิด</div>
+        <div class="questions">
+          <div class="q-chip" data-th="ถ้ามีจุด Outlier โดดๆ 1 จุด จะเกิดอะไรขึ้นกับเส้นพยากรณ์?" data-en="If you add a single extreme Outlier, what happens to the line?">ถ้ามีจุด Outlier โดดๆ 1 จุด จะเกิดอะไรขึ้นกับเส้นพยากรณ์?</div>
+          <div class="q-chip" data-th="ค่า R² สัมพันธ์กับเส้นความคลาดเคลื่อน (Residuals) อย่างไร?" data-en="How does R² relate to the Residual error lines?">ค่า R² สัมพันธ์กับเส้นความคลาดเคลื่อน (Residuals) อย่างไร?</div>
+          <div class="q-chip" data-th="ถ้าจุดกระจายเป็นวงกลม ค่า r จะเป็นเท่าไร?" data-en="If points form a perfect circle, what is r?">ถ้าจุดกระจายเป็นวงกลม ค่า r จะเป็นเท่าไร?</div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="card" style="padding-bottom: 12px;">
+        <div class="card-title" style="display: flex; justify-content: space-between; align-items: baseline;">
+          <span data-th="กราฟกระจาย (Scatter Plot)" data-en="Scatter Plot">กราฟกระจาย (Scatter Plot)</span>
+          <span style="font-size: 14px; font-weight: 600; color: #888;" data-th="(คลิกบนกราฟเพื่อเพิ่มจุด)" data-en="(Click anywhere to add a point)">(คลิกบนกราฟเพื่อเพิ่มจุด)</span>
+        </div>
+        
+        <div class="canvas-container" id="cvsContainer">
+          <canvas id="cvs"></canvas>
+          <div class="canvas-overlay-text" id="overlayText">
+            <span data-th="คลิกบนพื้นที่นี้<br>เพื่อวาดจุดข้อมูล" data-en="Click inside this area<br>to add data points">คลิกบนพื้นที่นี้<br>เพื่อวาดจุดข้อมูล</span>
+          </div>
+        </div>
+
+        <div class="stat-grid">
+          <div class="stat"><div class="stat-val" id="sN">0</div><div class="stat-lbl" data-th="จำนวนข้อมูล (n)" data-en="Sample Size (n)">จำนวนข้อมูล (n)</div></div>
+          <div class="stat" style="border-bottom: 3px solid #0d6efd;"><div class="stat-val" style="color:#0d6efd;" id="sR">—</div><div class="stat-lbl" data-th="สหสัมพันธ์ (r)" data-en="Correlation (r)">สหสัมพันธ์ (r)</div></div>
+          <div class="stat" style="border-bottom: 3px solid #20c997;"><div class="stat-val" style="color:#20c997;" id="sR2">—</div><div class="stat-lbl" data-th="R-Squared (R²)" data-en="R-Squared (R²)">R-Squared (R²)</div></div>
+        </div>
+
+        <div class="insight" id="insight">
+          <span data-th="เริ่มต้นโดยการคลิกเพื่อเพิ่มจุด หรือกดปุ่มสุ่มข้อมูลด้านซ้าย" data-en="Start by clicking to add points, or use the generate buttons on the left.">เริ่มต้นโดยการคลิกเพื่อเพิ่มจุด หรือกดปุ่มสุ่มข้อมูลด้านซ้าย</span>
+        </div>
+      </div>
+    </div>
+    
+  </div>
+</div>
+
+<script>
+// --- Language System ---
+var currentLang = 'th';
+function t(th, en) { return currentLang === 'en' ? en : th; }
+function setLang(lang) {
+  currentLang = lang;
+  document.querySelectorAll('.lang-btn').forEach(b => b.classList.toggle('active', b.textContent.trim().toLowerCase() === lang));
+  document.querySelectorAll('[data-th]').forEach(el => {
+    var val = el.getAttribute('data-' + lang);
+    if (val) el.innerHTML = val;
+  });
+  updateUI();
+}
+
+// --- App State ---
+let points = []; // Array of {x, y} mapped 0 to 100
+const canvas = document.getElementById('cvs');
+const ctx = canvas.getContext('2d');
+const overlay = document.getElementById('overlayText');
+
+// Logical coordinates 0 to 100
+const LOGICAL_MAX = 100;
+
+// --- Math & Regression Logic ---
+function calculateStats() {
+  const n = points.length;
+  if (n < 2) return null;
+
+  let sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0, sumY2 = 0;
+  points.forEach(p => {
+    sumX += p.x;
+    sumY += p.y;
+    sumXY += (p.x * p.y);
+    sumX2 += (p.x * p.x);
+    sumY2 += (p.y * p.y);
+  });
+
+  const meanX = sumX / n;
+  const meanY = sumY / n;
+
+  // Slope (b) and Intercept (a) for Y = a + bX
+  const denominator = (n * sumX2 - sumX * sumX);
+  let b = 0, a = meanY;
+  if (denominator !== 0) {
+    b = (n * sumXY - sumX * sumY) / denominator;
+    a = (sumY - b * sumX) / n;
+  }
+
+  // Correlation Coefficient (r)
+  const numR = (n * sumXY - sumX * sumY);
+  const denR = Math.sqrt((n * sumX2 - sumX * sumX) * (n * sumY2 - sumY * sumY));
+  let r = 0;
+  if (denR !== 0) {
+    r = numR / denR;
+  }
+  
+  // R-squared
+  const r2 = r * r;
+
+  return { n, meanX, meanY, a, b, r, r2 };
+}
+
+// --- Canvas Interaction ---
+function resizeCanvas() {
+  const container = document.getElementById('cvsContainer');
+  const W = container.clientWidth;
+  const H = 400;
+  canvas.style.width = W + 'px';
+  canvas.style.height = H + 'px';
+  canvas.width = W * window.devicePixelRatio;
+  canvas.height = H * window.devicePixelRatio;
+  ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+  draw();
+}
+window.addEventListener('resize', resizeCanvas);
+
+canvas.addEventListener('mousedown', (e) => {
+  const rect = canvas.getBoundingClientRect();
+  // Get raw pixel coordinates
+  const px = e.clientX - rect.left;
+  const py = e.clientY - rect.top;
+  
+  // Convert to logical coordinates (0-100)
+  // X is straightforward: 0 is left, 100 is right
+  // Y is inverted: 0 is bottom, 100 is top
+  const padding = 20;
+  const W = canvas.offsetWidth - padding * 2;
+  const H = canvas.offsetHeight - padding * 2;
+  
+  let lx = ((px - padding) / W) * LOGICAL_MAX;
+  let ly = ((canvas.offsetHeight - py - padding) / H) * LOGICAL_MAX;
+  
+  // Constrain to 0-100 logically just in case they click in padding
+  lx = Math.max(0, Math.min(LOGICAL_MAX, lx));
+  ly = Math.max(0, Math.min(LOGICAL_MAX, ly));
+
+  points.push({ x: lx, y: ly });
+  draw();
+});
+
+// --- Data Generators ---
+function clearData() {
+  points = [];
+  draw();
+}
+
+function generateRandomData() {
+  points = [];
+  const n = 20;
+  for (let i = 0; i < n; i++) {
+    points.push({ x: 10 + Math.random() * 80, y: 10 + Math.random() * 80 });
+  }
+  draw();
+}
+
+function generateTrend(direction) {
+  points = [];
+  const n = 25;
+  for (let i = 0; i < n; i++) {
+    let x = 10 + Math.random() * 80;
+    let noise = (Math.random() - 0.5) * 30; // Random scatter
+    let y = direction === 'positive' ? x + noise : (100 - x) + noise;
+    
+    // Constrain Y
+    y = Math.max(5, Math.min(95, y));
+    points.push({ x, y });
+  }
+  draw();
+}
+
+// --- Drawing Logic ---
+function draw() {
+  const W = canvas.offsetWidth;
+  const H = canvas.offsetHeight;
+  ctx.clearRect(0, 0, W, H);
+
+  // Toggle Overlay Text
+  overlay.style.opacity = points.length === 0 ? '1' : '0';
+
+  const pad = { top: 20, bottom: 20, left: 20, right: 20 };
+  const cw = W - pad.left - pad.right;
+  const ch = H - pad.top - pad.bottom;
+  
+  // Coordinate mappers
+  const toX = (val) => pad.left + (val / LOGICAL_MAX) * cw;
+  const toY = (val) => pad.top + ch - (val / LOGICAL_MAX) * ch;
+
+  const stats = calculateStats();
+  
+  // 1. Draw Grid Lines (Background)
+  ctx.strokeStyle = '#f0f0f0';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  for(let i=0; i<=100; i+=20) {
+    // Horizontal
+    ctx.moveTo(pad.left, toY(i)); ctx.lineTo(W - pad.right, toY(i));
+    // Vertical
+    ctx.moveTo(toX(i), pad.top); ctx.lineTo(toX(i), H - pad.bottom);
+  }
+  ctx.stroke();
+
+  // Draw Mean Lines
+  if (stats && document.getElementById('showMeans').checked) {
+    ctx.strokeStyle = '#aaa';
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([5, 5]);
+    ctx.beginPath();
+    // Y-mean line
+    ctx.moveTo(pad.left, toY(stats.meanY)); ctx.lineTo(W - pad.right, toY(stats.meanY));
+    // X-mean line
+    ctx.moveTo(toX(stats.meanX), pad.top); ctx.lineTo(toX(stats.meanX), H - pad.bottom);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    
+    // Mean Intersection Point
+    ctx.beginPath();
+    ctx.arc(toX(stats.meanX), toY(stats.meanY), 5, 0, Math.PI * 2);
+    ctx.fillStyle = '#ff922b'; // Orange
+    ctx.fill();
+    ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5; ctx.stroke();
+  }
+
+  // Draw Residuals (Errors)
+  if (stats && document.getElementById('showResiduals').checked) {
+    ctx.strokeStyle = 'rgba(220, 53, 69, 0.4)'; // Red-ish
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    points.forEach(p => {
+      const predY = stats.a + stats.b * p.x;
+      ctx.moveTo(toX(p.x), toY(p.y));
+      ctx.lineTo(toX(p.x), toY(predY));
+    });
+    ctx.stroke();
+  }
+
+  // Draw Regression Line
+  if (stats && document.getElementById('showLine').checked) {
+    ctx.strokeStyle = '#1a1a1a';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    // Draw line from x=0 to x=100
+    const y0 = stats.a;
+    const y100 = stats.a + stats.b * 100;
+    ctx.moveTo(toX(0), toY(y0));
+    ctx.lineTo(toX(100), toY(y100));
+    ctx.stroke();
+  }
+
+  // Draw Points (Scatter)
+  points.forEach(p => {
+    ctx.beginPath();
+    ctx.arc(toX(p.x), toY(p.y), 6, 0, Math.PI * 2);
+    ctx.fillStyle = '#0d6efd';
+    ctx.fill();
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+  });
+  
+  // Axes Borders (Foreground)
+  ctx.strokeStyle = '#333';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  // Y-Axis
+  ctx.moveTo(pad.left, pad.top); ctx.lineTo(pad.left, H - pad.bottom);
+  // X-Axis
+  ctx.moveTo(pad.left, H - pad.bottom); ctx.lineTo(W - pad.right, H - pad.bottom);
+  ctx.stroke();
+
+  updateUI(stats);
+}
+
+function updateUI(stats) {
+  const eqDisplay = document.getElementById('eqDisplay');
+  const sN = document.getElementById('sN');
+  const sR = document.getElementById('sR');
+  const sR2 = document.getElementById('sR2');
+  const ins = document.getElementById('insight');
+
+  sN.textContent = points.length;
+
+  if (!stats) {
+    eqDisplay.textContent = "Y = 0.00 + 0.00X";
+    sR.textContent = "—";
+    sR2.textContent = "—";
+    if(points.length === 1) {
+      ins.innerHTML = t(`เพิ่มอีก 1 จุดเพื่อสร้างเส้นตรง`, `Add 1 more point to create a line.`);
+    } else {
+      ins.innerHTML = t(`เริ่มต้นโดยการคลิกเพื่อเพิ่มจุด หรือกดปุ่มสุ่มข้อมูลด้านซ้าย`, `Start by clicking to add points, or use the generate buttons on the left.`);
+    }
+    return;
+  }
+
+  // Format equation
+  const sign = stats.b >= 0 ? '+' : '-';
+  eqDisplay.textContent = `Y = ${stats.a.toFixed(2)} ${sign} ${Math.abs(stats.b).toFixed(2)}X`;
+
+  sR.textContent = stats.r.toFixed(3);
+  sR2.textContent = stats.r2.toFixed(3);
+
+  // Dynamic Insight Generation based on r
+  const absR = Math.abs(stats.r);
+  let direction = stats.r > 0 ? t('เชิงบวก (Positive)', 'Positive') : t('เชิงลบ (Negative)', 'Negative');
+  if (absR < 0.1) direction = t('ไม่มีทิศทาง', 'No Direction');
+
+  let strength = "";
+  if (absR >= 0.8) strength = t('แข็งแกร่งมาก (Strong)', 'Very Strong');
+  else if (absR >= 0.5) strength = t('ปานกลาง (Moderate)', 'Moderate');
+  else if (absR >= 0.2) strength = t('อ่อน (Weak)', 'Weak');
+  else strength = t('ไม่มีความสัมพันธ์', 'None');
+
+  let explanation = "";
+  if (absR >= 0.8) {
+    explanation = t(`ข้อมูลเกาะกลุ่มใกล้เส้นตรงมาก ค่า <b>R² = ${(stats.r2*100).toFixed(0)}%</b> หมายถึงสมการนี้อธิบายความผันผวนของ Y ได้ดีเยี่ยม`,
+                    `Points are clustered tightly around the line. <b>R² = ${(stats.r2*100).toFixed(0)}%</b> means this equation excellently explains the variance in Y.`);
+  } else if (absR <= 0.3) {
+    explanation = t(`เส้นตรงแทบไม่สามารถพยากรณ์ข้อมูลได้เลย (สังเกตความยาวของเส้น Residuals ที่ยาวมาก)`,
+                    `The line barely predicts anything useful. (Notice how long the red Residual error lines are).`);
+  } else {
+    explanation = t(`ลองเปิด "แสดงความคลาดเคลื่อน (Residuals)" เพื่อดูว่าค่า R² ได้มาจากระยะห่างของจุดถึงเส้นตรงอย่างไร`,
+                    `Try turning on "Residual Errors" to visually see where R² comes from (the distance from points to the line).`);
+  }
+  
+  ins.innerHTML = t(
+    `<b>ความสัมพันธ์ (Correlation):</b> ${strength} ทิศทาง ${direction}<br>${explanation}`,
+    `<b>Correlation:</b> ${strength} and ${direction}.<br>${explanation}`
+  );
+}
+
+// Init
+setTimeout(resizeCanvas, 50);
+setLang('th');
+</script>
+</body>
+</html>

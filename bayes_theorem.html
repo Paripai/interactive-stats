@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bayes' Theorem Simulator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;600;700;800&family=IBM+Plex+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: "Noto Sans Thai","IBM Plex Sans",sans-serif; font-size: 18px; font-weight: 600; background: #f5f5f5; color: #1a1a1a; min-height: 100vh; }
+
+.header { background: #fff; border-bottom: 3px solid #1a1a1a; padding: 16px 32px; display: flex; align-items: center; justify-content: space-between; }
+.header-left { display: flex; align-items: baseline; gap: 14px; }
+.header h1 { font-size: 28px; font-weight: 800; }
+.header span { font-size: 20px; font-weight: 600; color: #555; }
+
+.home-btn { text-decoration: none; color: #6c757d; font-size: 15px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border: 1px solid #dee2e6; border-radius: 6px; background: #fff; transition: all 0.2s; flex-shrink: 0; }
+.home-btn:hover { background: #f8f9fa; color: #0d6efd; }
+
+.lang-toggle { display: flex; border: 2px solid #1a1a1a; border-radius: 8px; overflow: hidden; }
+.lang-btn { font-family: inherit; font-size: 16px; font-weight: 700; padding: 6px 16px; border: none; cursor: pointer; background: #fff; color: #888; transition: all .12s; }
+.lang-btn.active { background: #1a1a1a; color: #fff; }
+
+.main { max-width: 1050px; margin: 24px auto; padding: 0 24px; }
+.card { background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 20px; margin-bottom: 16px; }
+.card-title { font-size: 20px; font-weight: 800; margin-bottom: 14px; border-bottom: 1px solid #eee; padding-bottom: 8px; }
+
+/* Layout */
+.layout { display: grid; grid-template-columns: 340px 1fr; gap: 20px; }
+@media (max-width: 850px) { .layout { grid-template-columns: 1fr; } }
+
+/* Controls */
+.slider-group { margin-bottom: 18px; }
+.slider-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px; }
+.slider-name { font-size: 16px; font-weight: 700; }
+.slider-val { font-size: 22px; font-weight: 800; min-width: 48px; text-align: right; color: #1a1a1a; }
+input[type=range] { width: 100%; cursor: pointer; }
+input[type=range]#baseSlider { accent-color: #e03131; }
+input[type=range]#sensSlider { accent-color: #20c997; }
+input[type=range]#specSlider { accent-color: #4dabf7; }
+.slider-ticks { display: flex; justify-content: space-between; font-size: 13px; font-weight: 600; color: #999; margin-top: 2px; }
+
+/* Canvas */
+.canvas-container { position: relative; background: #fdfdfd; border-radius: 6px; border: 1px solid #eee; padding: 10px; }
+canvas { width: 100%; display: block; }
+
+/* Stats & Legends */
+.stat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 16px; }
+.stat { background: #f8f9fa; border: 1px solid #e0e0e0; border-radius: 6px; padding: 12px; text-align: center; }
+.stat-val { font-size: 24px; font-weight: 800; }
+.stat-lbl { font-size: 14px; font-weight: 600; color: #555; margin-top: 2px; }
+
+/* Specific Stat Colors */
+.stat-tp { border-bottom: 4px solid #e03131; }
+.stat-tp .stat-val { color: #e03131; }
+.stat-fp { border-bottom: 4px solid #4dabf7; }
+.stat-fp .stat-val { color: #4dabf7; }
+.stat-ppv { border-bottom: 4px solid #1a1a1a; background: #fff5f5; border-color: #ff6b6b;}
+.stat-ppv .stat-val { color: #e03131; font-size: 28px; }
+
+.legend { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 12px; justify-content: center; }
+.legend-item { display: flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 600; color: #555; }
+.dot { width: 14px; height: 14px; border-radius: 50%; display: inline-block; }
+
+.insight { font-size: 16px; font-weight: 600; color: #333; background: #f8f9fa; border-left: 4px solid #1a1a1a; padding: 12px 16px; border-radius: 0 6px 6px 0; margin-top: 16px; line-height: 1.5; }
+
+.questions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.q-chip { font-size: 15px; font-weight: 600; padding: 6px 14px; border: 1px solid #bbb; border-radius: 20px; color: #444; background: #fafafa; line-height: 1.4; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-left">
+    <a href="index.html" class="home-btn" data-th="← หน้าแรก" data-en="← Home">← Home</a>
+    <h1>Bayes' Theorem</h1>
+  </div>
+  <div class="lang-toggle">
+    <button class="lang-btn active" onclick="setLang('th')">TH</button>
+    <button class="lang-btn" onclick="setLang('en')">EN</button>
+  </div>
+</div>
+
+<div class="main">
+  <div class="layout">
+    
+    <div>
+      <div class="card">
+        <div class="card-title" data-th="ตั้งค่าการทดสอบ" data-en="Test Parameters">ตั้งค่าการทดสอบ</div>
+
+        <div class="slider-group">
+          <div class="slider-header">
+            <span class="slider-name" data-th="อัตราการเกิดโรค (Base Rate)" data-en="Prevalence (Base Rate)">อัตราการเกิดโรค (Base Rate)</span>
+            <span class="slider-val" style="color: #e03131;" id="baseVal">1%</span>
+          </div>
+          <input type="range" id="baseSlider" min="0.1" max="25" value="1" step="0.1" oninput="draw()">
+          <div class="slider-ticks"><span>0.1% (หายาก)</span><span>25% (พบบ่อย)</span></div>
+        </div>
+
+        <div class="slider-group">
+          <div class="slider-header">
+            <span class="slider-name" data-th="ความแม่นยำเมื่อป่วยจริง (Sensitivity)" data-en="Sensitivity (True Positive Rate)">ความแม่นยำเมื่อป่วยจริง (Sensitivity)</span>
+            <span class="slider-val" style="color: #20c997;" id="sensVal">90%</span>
+          </div>
+          <input type="range" id="sensSlider" min="50" max="100" value="90" step="1" oninput="draw()">
+          <div class="slider-ticks"><span>50%</span><span>100%</span></div>
+        </div>
+
+        <div class="slider-group">
+          <div class="slider-header">
+            <span class="slider-name" data-th="ความแม่นยำเมื่อไม่ป่วย (Specificity)" data-en="Specificity (True Negative Rate)">ความแม่นยำเมื่อไม่ป่วย (Specificity)</span>
+            <span class="slider-val" style="color: #4dabf7;" id="specVal">90%</span>
+          </div>
+          <input type="range" id="specSlider" min="50" max="100" value="90" step="1" oninput="draw()">
+          <div class="slider-ticks"><span>50%</span><span>100%</span></div>
+        </div>
+        
+        <div style="font-size: 14.5px; color: #444; background: #eef2f5; padding: 12px; border-radius: 6px; line-height: 1.5;">
+          <b data-th="คำถามหลัก:" data-en="The Big Question:">คำถามหลัก:</b> <span data-th="ถ้าคุณเดินไปตรวจแล้วผลออกมาเป็น &quot;บวก (พบเชื้อ)&quot; โอกาสที่คุณจะป่วยจริงๆ มีกี่เปอร์เซ็นต์?" data-en="If you get tested and the result is &quot;Positive&quot;, what is the actual probability that you are sick?">ถ้าคุณเดินไปตรวจแล้วผลออกมาเป็น "บวก (พบเชื้อ)" โอกาสที่คุณจะป่วยจริงๆ มีกี่เปอร์เซ็นต์?</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title" data-th="คำถามชวนคิด" data-en="Discussion Questions">คำถามชวนคิด</div>
+        <div class="questions">
+          <div class="q-chip" data-th="ทำไมตรวจผลบวกแล้วถึงยังน่าจะไม่ป่วย?" data-en="Why is it likely I'm healthy even with a positive test?">ทำไมตรวจผลบวกแล้วถึงยังน่าจะไม่ป่วย?</div>
+          <div class="q-chip" data-th="Base Rate สำคัญกว่าความแม่นยำของเครื่องมือจริงหรือ?" data-en="Is Base Rate more important than test accuracy?">Base Rate สำคัญกว่าความแม่นยำของเครื่องมือจริงหรือ?</div>
+          <div class="q-chip" data-th="ถ้าโรคระบาดหนักขึ้น (Base Rate เพิ่ม) ผลจะเปลี่ยนอย่างไร?" data-en="What happens if the disease becomes more common?">ถ้าโรคระบาดหนักขึ้น (Base Rate เพิ่ม) ผลจะเปลี่ยนอย่างไร?</div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="card">
+        <div class="card-title" data-th="ประชากรจำลอง 1,000 คน" data-en="Simulated Population (1,000 people)">ประชากรจำลอง 1,000 คน</div>
+        
+        <div class="canvas-container">
+          <canvas id="cvs" height="280"></canvas>
+        </div>
+        
+        <div class="legend">
+          <div class="legend-item"><div class="dot" style="background:#ff8787;"></div><span data-th="ป่วยจริง (Sick)" data-en="Actually Sick">ป่วยจริง (Sick)</span></div>
+          <div class="legend-item"><div class="dot" style="background:#a5d8ff;"></div><span data-th="ปกติ (Healthy)" data-en="Actually Healthy">ปกติ (Healthy)</span></div>
+          <div class="legend-item" style="margin-left: 10px; border-left: 1px solid #ccc; padding-left: 10px;">
+            <div class="dot" style="background:#fff; border: 3px solid #1a1a1a;"></div><span data-th="ตรวจพบผลบวก (Test Positive)" data-en="Tested Positive">ตรวจพบผลบวก (Test Positive)</span>
+          </div>
+        </div>
+
+        <div class="stat-grid">
+          <div class="stat stat-tp"><div class="stat-val" id="sTP">0</div><div class="stat-lbl" data-th="ป่วย & ผลบวก (TP)" data-en="Sick & Positive (TP)">ป่วย & ผลบวก (TP)</div></div>
+          <div class="stat stat-fp"><div class="stat-val" id="sFP">0</div><div class="stat-lbl" data-th="ปกติ แต่ผลบวก (FP)" data-en="Healthy but Pos (FP)">ปกติ แต่ผลบวก (FP)</div></div>
+          <div class="stat stat-ppv"><div class="stat-val" id="sPPV">0%</div><div class="stat-lbl" data-th="โอกาสป่วยจริง P(Sick | Pos)" data-en="Prob. Sick given Pos P(Sick|Pos)">โอกาสป่วยจริง P(Sick | Pos)</div></div>
+        </div>
+
+        <div class="insight" id="insight"></div>
+      </div>
+    </div>
+    
+  </div>
+</div>
+
+<script>
+// --- Language System ---
+var currentLang = 'th';
+function t(th, en) { return currentLang === 'en' ? en : th; }
+function setLang(lang) {
+  currentLang = lang;
+  document.querySelectorAll('.lang-btn').forEach(b => b.classList.toggle('active', b.textContent.trim().toLowerCase() === lang));
+  document.querySelectorAll('[data-th]').forEach(el => {
+    var val = el.getAttribute('data-' + lang);
+    if (val) el.innerHTML = val;
+  });
+  draw();
+}
+
+// --- Canvas Setup ---
+const canvas = document.getElementById('cvs');
+const ctx = canvas.getContext('2d');
+const TOTAL_POP = 1000;
+const COLS = 50;
+const ROWS = 20;
+
+function resizeCanvas() {
+  const container = canvas.parentElement;
+  const W = container.clientWidth - 20; // minus padding
+  const H = (W / COLS) * ROWS; // maintain aspect ratio
+  
+  canvas.style.width = W + 'px';
+  canvas.style.height = H + 'px';
+  canvas.width = W * window.devicePixelRatio;
+  canvas.height = H * window.devicePixelRatio;
+  ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+  draw();
+}
+window.addEventListener('resize', resizeCanvas);
+
+// --- Simulation Logic ---
+function draw() {
+  // 1. Get Values
+  const baseRate = parseFloat(document.getElementById('baseSlider').value);
+  const sens = parseFloat(document.getElementById('sensSlider').value);
+  const spec = parseFloat(document.getElementById('specSlider').value);
+
+  // Update Labels
+  document.getElementById('baseVal').textContent = baseRate % 1 === 0 ? baseRate + '%' : baseRate.toFixed(1) + '%';
+  document.getElementById('sensVal').textContent = sens + '%';
+  document.getElementById('specVal').textContent = spec + '%';
+
+  // 2. Math Calculations
+  const sick = Math.round(TOTAL_POP * (baseRate / 100));
+  const healthy = TOTAL_POP - sick;
+  
+  const truePos = Math.round(sick * (sens / 100));
+  const falseNeg = sick - truePos;
+  
+  const trueNeg = Math.round(healthy * (spec / 100));
+  const falsePos = healthy - trueNeg;
+  
+  const totalPos = truePos + falsePos;
+  const ppv = totalPos === 0 ? 0 : (truePos / totalPos) * 100;
+
+  // Update UI Stats
+  document.getElementById('sTP').textContent = truePos;
+  document.getElementById('sFP').textContent = falsePos;
+  document.getElementById('sPPV').textContent = ppv.toFixed(1) + '%';
+
+  // Dynamic Insight
+  const ins = document.getElementById('insight');
+  if (baseRate < 5 && falsePos > truePos) {
+    ins.innerHTML = t(
+      `<b>Base Rate Fallacy:</b> แม้เครื่องตรวจจะแม่นถึง ${sens}% แต่เพราะโรคนี้หายาก (คนป่วยจริงมีแค่ ${sick} คน) ทำให้ผลบวกลวง (${falsePos} คน) มีจำนวนเยอะกว่าคนป่วยจริงจนท่วมท้น! โอกาสที่คุณจะป่วยจริงจึงมีแค่ <b>${ppv.toFixed(1)}%</b> เท่านั้น`,
+      `<b>Base Rate Fallacy:</b> Even with ${sens}% accuracy, because the disease is rare (only ${sick} sick people), the False Positives (${falsePos}) completely overwhelm the True Positives! Your actual chance of being sick is only <b>${ppv.toFixed(1)}%</b>.`
+    );
+  } else if (ppv > 90) {
+    ins.innerHTML = t(
+      `เมื่อโรคนี้พบบ่อยขึ้น (Base Rate สูง) หรือเครื่องมือมีความจำเพาะสูงมาก ผลตรวจ "บวก" จึงมีความน่าเชื่อถือสูงตามไปด้วย (โอกาสป่วยจริง ${ppv.toFixed(1)}%)`,
+      `When the disease is more common (high Base Rate) or the test is highly specific, a "Positive" result becomes highly reliable (<b>${ppv.toFixed(1)}%</b> chance of being sick).`
+    );
+  } else {
+    ins.innerHTML = t(
+      `เมื่อนำผลตรวจรวมกัน (ไฮไลท์กรอบดำ) จะพบว่ามีทั้งคนป่วยจริงและคนปกติปะปนกันอยู่ สัดส่วนระหว่างสองกลุ่มนี้คือค่า <b>Positive Predictive Value (PPV)</b>`,
+      `Looking at all Positive tests (black borders), you see a mix of sick and healthy people. The ratio between them is the <b>Positive Predictive Value (PPV)</b>.`
+    );
+  }
+
+  // 3. Draw Grid
+  if (!canvas.offsetWidth) return;
+  const W = canvas.offsetWidth;
+  const H = canvas.offsetHeight;
+  ctx.clearRect(0, 0, W, H);
+
+  const cx = W / COLS;
+  const cy = H / ROWS;
+  const radius = Math.min(cx, cy) * 0.35;
+
+  let currentIdx = 0;
+  
+  // Helper to draw a dot
+  function drawDot(isSick, isPos) {
+    const col = currentIdx % COLS;
+    const row = Math.floor(currentIdx / COLS);
+    const x = col * cx + cx / 2;
+    const y = row * cy + cy / 2;
+
+    ctx.beginPath();
+    ctx.arc(x, y, radius, 0, Math.PI * 2);
+    
+    // Fill Color
+    if (isSick) {
+      ctx.fillStyle = isPos ? '#fa5252' : '#ffc9c9'; // Red / Faint Red
+    } else {
+      ctx.fillStyle = isPos ? '#74c0fc' : '#e9ecef'; // Blue / Faint Gray
+    }
+    
+    // Dimming opacity for Negative tests to highlight Positives
+    ctx.globalAlpha = isPos ? 1.0 : 0.4;
+    ctx.fill();
+
+    // Highlight border for Positive Tests
+    if (isPos) {
+      ctx.beginPath();
+      ctx.arc(x, y, radius + 2.5, 0, Math.PI * 2);
+      ctx.strokeStyle = '#1a1a1a';
+      ctx.lineWidth = 2.5;
+      ctx.stroke();
+    }
+    
+    ctx.globalAlpha = 1.0; // Reset
+    currentIdx++;
+  }
+
+  // Sequence of dots:
+  // 1. Sick & Positive (TP)
+  for (let i = 0; i < truePos; i++) drawDot(true, true);
+  // 2. Sick & Negative (FN)
+  for (let i = 0; i < falseNeg; i++) drawDot(true, false);
+  // 3. Healthy & Positive (FP)
+  for (let i = 0; i < falsePos; i++) drawDot(false, true);
+  // 4. Healthy & Negative (TN)
+  for (let i = 0; i < trueNeg; i++) drawDot(false, false);
+}
+
+// Init
+setTimeout(resizeCanvas, 50);
+setLang('th');
+</script>
+</body>
+</html>

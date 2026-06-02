@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Central Limit Theorem Simulator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;600;700;800&family=IBM+Plex+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: "Noto Sans Thai","IBM Plex Sans",sans-serif; font-size: 19px; font-weight: 600; background: #f5f5f5; color: #1a1a1a; min-height: 100vh; }
+.header { background: #fff; border-bottom: 3px solid #1a1a1a; padding: 16px 32px; display: flex; align-items: center; justify-content: space-between; }
+.header-left { display: flex; align-items: baseline; gap: 14px; }
+.header h1 { font-size: 30px; font-weight: 800; flex: 1; }
+.home-btn { text-decoration: none; color: #6c757d; font-size: 16px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border: 1px solid #dee2e6; border-radius: 6px; background: #fff; transition: all 0.2s; flex-shrink: 0; }
+.home-btn:hover { background: #f8f9fa; color: #0d6efd; }
+
+.lang-toggle { display: flex; border: 2px solid #1a1a1a; border-radius: 8px; overflow: hidden; }
+.lang-btn { font-family: inherit; font-size: 16px; font-weight: 700; padding: 6px 16px; border: none; cursor: pointer; background: #fff; color: #888; transition: all .12s; }
+.lang-btn.active { background: #1a1a1a; color: #fff; }
+
+.main { max-width: 980px; margin: 28px auto; padding: 0 24px; }
+.card { background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 20px; margin-bottom: 16px; }
+.card-title { font-size: 21px; font-weight: 800; margin-bottom: 14px; border-bottom: 1px solid #eee; padding-bottom: 8px; }
+.two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.btn { font-family: inherit; font-size: 17px; font-weight: 800; padding: 8px 20px; border-radius: 6px; border: 1.5px solid #1a1a1a; background: #1a1a1a; color: #fff; cursor: pointer; transition: background .12s; }
+.btn:hover { background: #333; }
+.btn-sec { background: #fff; color: #1a1a1a; }
+.btn-sec:hover { background: #f0f0f0; }
+.ctrl-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.ctrl-label { font-size: 17px; font-weight: 600; }
+select { font-family: inherit; font-size: 17px; font-weight: 700; padding: 6px 12px; border: 1.5px solid #bbb; border-radius: 6px; background: #fff; cursor: pointer; }
+canvas { width: 100%; display: block; border-radius: 4px; }
+.stat-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 10px; margin-top: 12px; }
+.stat { background: #f7f7f7; border: 1px solid #e0e0e0; border-radius: 6px; padding: 10px; text-align: center; }
+.stat-val { font-size: 26px; font-weight: 800; }
+.stat-lbl { font-size: 15px; font-weight: 600; color: #666; margin-top: 2px; }
+.insight { font-size: 17px; font-weight: 600; color: #333; background: #f8f9fa; border-left: 4px solid #0d6efd; padding: 12px 16px; border-radius: 0 6px 6px 0; min-height: 40px; }
+.questions { display: flex; flex-wrap: wrap; gap: 8px; }
+.q-chip { font-size: 17px; font-weight: 600; padding: 5px 14px; border: 1px solid #bbb; border-radius: 20px; color: #444; background: #fafafa; }
+.legend { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 10px; }
+.legend-item { display: flex; align-items: center; gap: 6px; font-size: 16px; font-weight: 600; color: #555; }
+.legend-box { width: 20px; height: 12px; border-radius: 2px; }
+.step-indicator { display: flex; gap: 6px; align-items: center; font-size: 16px; font-weight: 600; color: #555; margin-top: 14px; flex-wrap: wrap; }
+.step-dot { width: 10px; height: 10px; border-radius: 50%; background: #ddd; flex-shrink: 0; }
+.step-dot.done { background: #1a1a1a; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-left">
+    <a href="index.html" class="home-btn" data-th="← หน้าแรก" data-en="← Home">← Home</a>
+    <h1>Central Limit Theorem Simulator</h1>
+  </div>
+  <div class="lang-toggle">
+    <button class="lang-btn active" onclick="setLang('th')">TH</button>
+    <button class="lang-btn" onclick="setLang('en')">EN</button>
+  </div>
+</div>
+
+<div class="main">
+  <div class="card">
+    <div class="card-title" data-th="ตั้งค่าการทดลอง" data-en="Experiment Setup">ตั้งค่าการทดลอง</div>
+    <div class="ctrl-row">
+      <span class="ctrl-label" data-th="รูปร่าง Population:" data-en="Population Shape:">รูปร่าง Population:</span>
+      <select id="popShape" onchange="resetAll()">
+        <option value="uniform" data-th="Uniform (สม่ำเสมอ)" data-en="Uniform">Uniform (สม่ำเสมอ)</option>
+        <option value="skew" data-th="เบ้ขวา (Right-skewed)" data-en="Right-skewed">เบ้ขวา (Right-skewed)</option>
+        <option value="bimodal" data-th="Bimodal (สองยอด)" data-en="Bimodal">Bimodal (สองยอด)</option>
+        <option value="normal" data-th="Normal (อ้างอิง)" data-en="Normal (Reference)">Normal (อ้างอิง)</option>
+      </select>
+      
+      <span class="ctrl-label" style="margin-left: 8px;" data-th="ขนาด n:" data-en="Sample Size (n):">ขนาด n:</span>
+      <select id="nSize" onchange="resetAll()">
+        <option value="2">n = 2</option>
+        <option value="5">n = 5</option>
+        <option value="10">n = 10</option>
+        <option value="30" selected>n = 30</option>
+        <option value="50">n = 50</option>
+      </select>
+      
+      <button class="btn" onclick="sampleOnce()" data-th="สุ่ม 1 ครั้ง" data-en="Draw 1">สุ่ม 1 ครั้ง</button>
+      <button class="btn btn-sec" onclick="sampleN(100)">+ 100</button>
+      <button class="btn btn-sec" onclick="sampleN(1000)">+ 1,000</button>
+      <button class="btn btn-sec" onclick="resetAll()" data-th="รีเซ็ต" data-en="Reset">รีเซ็ต</button>
+    </div>
+    <div class="step-indicator" id="stepIndicator">
+      <span id="progLabel" data-th="ความคืบหน้า:" data-en="Progress:">ความคืบหน้า:</span>
+    </div>
+  </div>
+
+  <div class="two-col">
+    <div class="card">
+      <div class="card-title">Population Distribution</div>
+      <canvas id="popCanvas" height="180"></canvas>
+      <div style="margin-top:8px;font-size:15px;font-weight:600;color:#555" id="popInfo"></div>
+    </div>
+    <div class="card">
+      <div class="card-title" data-th="Sampling Distribution ของ x̄" data-en="Sampling Distribution of x̄">Sampling Distribution ของ x̄</div>
+      <canvas id="smpCanvas" height="180"></canvas>
+      <div class="legend">
+        <div class="legend-item"><div class="legend-box" style="background:#1a1a1a"></div><span data-th="x̄ ที่สุ่มได้" data-en="Sampled x̄">x̄ ที่สุ่มได้</span></div>
+        <div class="legend-item"><div class="legend-box" style="border:2px dashed #999;background:transparent"></div><span data-th="Normal curve (ทฤษฎี CLT)" data-en="Normal curve (CLT theory)">Normal curve (ทฤษฎี CLT)</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title" data-th="สรุปผล" data-en="Summary">สรุปผล</div>
+    <div class="stat-grid">
+      <div class="stat"><div class="stat-val" id="sRounds">0</div><div class="stat-lbl" data-th="จำนวนรอบที่สุ่ม" data-en="Total Draws">จำนวนรอบที่สุ่ม</div></div>
+      <div class="stat"><div class="stat-val" id="sMeanXbar">&#8212;</div><div class="stat-lbl" data-th="Mean ของ x̄" data-en="Mean of x̄">Mean ของ x̄</div></div>
+      <div class="stat"><div class="stat-val" id="sSEObs">&#8212;</div><div class="stat-lbl" data-th="SD ของ x̄ (สังเกต)" data-en="Observed SD of x̄">SD ของ x̄ (สังเกต)</div></div>
+      <div class="stat"><div class="stat-val" id="sSETheory">&#8212;</div><div class="stat-lbl" data-th="SE ทฤษฎี (σ/√n)" data-en="Theoretical SE (σ/√n)">SE ทฤษฎี (σ/√n)</div></div>
+    </div>
+    <div class="insight" id="insight" style="margin-top:16px"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title" data-th="คำถามชวนคิด" data-en="Discussion Questions">คำถามชวนคิด</div>
+    <div class="questions">
+      <div class="q-chip" data-th="รูปร่าง population กระทบ sampling distribution ไหม?" data-en="Does population shape affect the sampling distribution?">รูปร่าง population กระทบ sampling distribution ไหม?</div>
+      <div class="q-chip" data-th="n ใหญ่ขึ้น SD ของ x̄ เปลี่ยนอย่างไร?" data-en="How does SD of x̄ change as n increases?">n ใหญ่ขึ้น SD ของ x̄ เปลี่ยนอย่างไร?</div>
+      <div class="q-chip" data-th="CLT เริ่มทำงานเมื่อ n ประมาณเท่าไร?" data-en="At what sample size (n) does CLT kick in?">CLT เริ่มทำงานเมื่อ n ประมาณเท่าไร?</div>
+      <div class="q-chip" data-th="ทำไม Mean ของ x̄ ≈ μ ของ population?" data-en="Why is the Mean of x̄ ≈ Population μ?">ทำไม Mean ของ x̄ ≈ μ ของ population?</div>
+    </div>
+  </div>
+</div>
+
+<script>
+// Language Control
+var currentLang = 'th';
+
+function t(th, en) {
+  return currentLang === 'en' ? en : th;
+}
+
+function setLang(lang) {
+  currentLang = lang;
+  
+  // Update Buttons
+  document.querySelectorAll('.lang-btn').forEach(function(b) {
+    b.classList.toggle('active', b.textContent.trim().toLowerCase() === lang);
+  });
+  
+  // Update Data Attributes
+  document.querySelectorAll('[data-th]').forEach(function(el) {
+    var val = el.getAttribute('data-' + lang);
+    if (val) el.innerHTML = val;
+  });
+  
+  // Update Select Options
+  document.querySelectorAll('select option[data-th]').forEach(function(opt) {
+    var val = opt.getAttribute('data-' + lang);
+    if (val) opt.textContent = val;
+  });
+
+  // Re-trigger dynamic text updates
+  updateStats();
+  updateSteps();
+}
+
+// Logic variables
+const POP_SIZE = 5000;
+let popData = [], xbarHistory = [], n = 30;
+
+function genPop(shape){
+  const data = [];
+  for(let i=0; i<POP_SIZE; i++){
+    if(shape==='uniform') data.push(Math.random()*10);
+    else if(shape==='skew') data.push(-Math.log(1-Math.random())*3);
+    else if(shape==='bimodal') data.push(Math.random()<0.5 ? randNorm(3,0.8) : randNorm(7,0.8));
+    else data.push(randNorm(5,1.5));
+  }
+  return data;
+}
+
+function randNorm(mu=0, sd=1){
+  let u=0, v=0;
+  while(!u) u=Math.random();
+  while(!v) v=Math.random();
+  return mu + sd * Math.sqrt(-2*Math.log(u)) * Math.cos(2*Math.PI*v);
+}
+
+function mean(arr){ return arr.reduce((a,b)=>a+b,0)/arr.length; }
+function std(arr){
+  const m=mean(arr);
+  return Math.sqrt(arr.reduce((a,b)=>a+(b-m)**2,0)/arr.length);
+}
+
+function resetAll(){
+  n = parseInt(document.getElementById('nSize').value);
+  const shape = document.getElementById('popShape').value;
+  popData = genPop(shape);
+  xbarHistory = [];
+  drawPop();
+  drawSmp();
+  updateStats();
+  updateSteps();
+}
+
+function sampleOnce(){
+  if(!popData.length) resetAll();
+  n = parseInt(document.getElementById('nSize').value);
+  const sample = [];
+  for(let i=0; i<n; i++) sample.push(popData[Math.floor(Math.random()*POP_SIZE)]);
+  xbarHistory.push(mean(sample));
+  drawSmp();
+  updateStats();
+  updateSteps();
+}
+
+function sampleN(k){
+  if(!popData.length) resetAll();
+  n = parseInt(document.getElementById('nSize').value);
+  for(let i=0; i<k; i++){
+    const s = [];
+    for(let j=0; j<n; j++) s.push(popData[Math.floor(Math.random()*POP_SIZE)]);
+    xbarHistory.push(mean(s));
+  }
+  drawSmp();
+  updateStats();
+  updateSteps();
+}
+
+function drawHistogram(ctx, data, w, h, color, overlay){
+  color = color || '#1a1a1a';
+  const pad = {top:14, bottom:28, left:30, right:10}, cw=w-pad.left-pad.right, ch=h-pad.top-pad.bottom;
+  ctx.clearRect(0,0,w,h);
+  
+  const mn = Math.min(...data), mx = Math.max(...data), bins = 24, bw = (mx-mn)/bins, counts = Array(bins).fill(0);
+  data.forEach(v => {
+    let b = Math.floor((v-mn)/bw);
+    if(b>=bins) b=bins-1;
+    counts[b]++;
+  });
+  
+  const maxC = Math.max(...counts);
+  counts.forEach((c,i) => {
+    const x = pad.left+i/bins*cw, bwx = cw/bins, bh = (c/maxC)*ch;
+    ctx.fillStyle = color+'33';
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 0.5;
+    ctx.fillRect(x, pad.top+ch-bh, bwx-1, bh);
+    ctx.strokeRect(x, pad.top+ch-bh, bwx-1, bh);
+  });
+  
+  ctx.strokeStyle = '#888'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(pad.left, h-pad.bottom); ctx.lineTo(w-pad.right, h-pad.bottom); ctx.stroke();
+  
+  ctx.fillStyle = '#555'; ctx.font = '14px Noto Sans Thai, sans-serif'; ctx.textAlign = 'center';
+  [0, 0.25, 0.5, 0.75, 1].forEach(pt => {
+    const v = mn+pt*(mx-mn), px = pad.left+pt*cw;
+    ctx.fillText(v.toFixed(1), px, h-pad.bottom+12);
+  });
+  
+  if(overlay){
+    const mu = overlay.mu, sd = overlay.sd;
+    ctx.beginPath(); ctx.setLineDash([5,4]); ctx.strokeStyle = '#dc3545'; ctx.lineWidth = 2.5;
+    for(let i=0; i<=200; i++){
+      const x = mn+i*(mx-mn)/200, y = Math.exp(-0.5*((x-mu)/sd)**2)/(sd*Math.sqrt(2*Math.PI)), px = pad.left+(x-mn)/(mx-mn)*cw, mPDF = 1/(sd*Math.sqrt(2*Math.PI)), py = pad.top+ch-(y/mPDF)*ch;
+      i===0 ? ctx.moveTo(px,py) : ctx.lineTo(px,py);
+    }
+    ctx.stroke(); ctx.setLineDash([]);
+  }
+}
+
+function gc(id,h){
+  const cvs = document.getElementById(id), DPR = devicePixelRatio||1, W = cvs.offsetWidth;
+  cvs.width = W*DPR; cvs.height = h*DPR;
+  const ctx = cvs.getContext('2d'); ctx.scale(DPR,DPR);
+  return {ctx, W, H:h};
+}
+
+function drawPop(){
+  const r = gc('popCanvas',180);
+  drawHistogram(r.ctx, popData, r.W, r.H);
+  const mu = mean(popData).toFixed(2), sd = std(popData).toFixed(2);
+  document.getElementById('popInfo').textContent = `μ = ${mu}  |  σ = ${sd}  |  N = ${POP_SIZE.toLocaleString()}`;
+}
+
+function drawSmp(){
+  const r = gc('smpCanvas',180);
+  if(!xbarHistory.length){ r.ctx.clearRect(0,0,r.W,r.H); return; }
+  const ov = xbarHistory.length>=30 ? {mu:mean(xbarHistory), sd:std(xbarHistory)} : null;
+  drawHistogram(r.ctx, xbarHistory, r.W, r.H, '#1a1a1a', ov);
+}
+
+function updateStats(){
+  document.getElementById('sRounds').textContent = xbarHistory.length.toLocaleString();
+  if(!xbarHistory.length){
+    ['sMeanXbar','sSEObs','sSETheory'].forEach(id => document.getElementById(id).textContent = '—');
+    document.getElementById('insight').textContent = t(
+      'กด "สุ่ม 1 ครั้ง" เพื่อเริ่มต้น — แต่ละครั้งคือการสุ่มตัวอย่าง n คนจาก population แล้วคำนวณค่าเฉลี่ย',
+      'Click "Draw 1" to start — each draw takes a sample of size n from the population and calculates its mean.'
+    );
+    return;
+  }
+  
+  const mu = mean(xbarHistory), sd = std(xbarHistory), popSD = std(popData), seT = popSD/Math.sqrt(n);
+  document.getElementById('sMeanXbar').textContent = mu.toFixed(2);
+  document.getElementById('sSEObs').textContent = sd.toFixed(3);
+  document.getElementById('sSETheory').textContent = seT.toFixed(3);
+  
+  const ins = document.getElementById('insight');
+  if(xbarHistory.length >= 1000){
+    ins.innerHTML = t(
+      `Sampling distribution เข้าใกล้ Normal แล้ว แม้ population จะมีรูปร่างอื่น — นี่คือพลังของ <b>CLT!</b> | SE สังเกต (${sd.toFixed(3)}) ใกล้ทฤษฎี (${seT.toFixed(3)}) มากแค่ไหน?`,
+      `The sampling distribution approaches Normal, despite the population's shape — this is the power of <b>CLT!</b> | How close is Observed SE (${sd.toFixed(3)}) to Theoretical SE (${seT.toFixed(3)})?`
+    );
+  } else if(xbarHistory.length >= 100) {
+    ins.textContent = t(
+      'รูปร่างเริ่มชัดขึ้นเป็นระฆังคว่ำ — ลองเปลี่ยน n แล้วดูว่าความกว้างของกราฟ (SE) แคบลงหรือกว้างขึ้น',
+      'The bell shape is emerging — try changing n to see if the width of the graph (SE) narrows or widens.'
+    );
+  } else if(xbarHistory.length >= 10) {
+    ins.textContent = t(
+      'ยังน้อยเกินไปที่จะเห็นรูปร่างโค้ง — ลองกดปุ่ม "+ 100 ครั้ง" หรือ "+ 1,000 ครั้ง"',
+      'Still too few samples to see the curve — try clicking "+ 100" or "+ 1,000".'
+    );
+  } else {
+    ins.textContent = t(
+      `ได้ ${xbarHistory.length} ค่า x̄ แล้ว — ต้องการอีกหลายร้อยครั้งกว่าจะเห็น pattern`,
+      `Collected ${xbarHistory.length} values of x̄ — hundreds more are needed to reveal a pattern.`
+    );
+  }
+}
+
+function updateSteps(){
+  const r = xbarHistory.length, milestones = [1, 10, 100, 1000];
+  const ind = document.getElementById('stepIndicator');
+  
+  const labelText = t("ความคืบหน้า:", "Progress:");
+  ind.innerHTML = `<span style="margin-right: 4px;">${labelText}</span>`;
+  
+  milestones.forEach(m => {
+    const dot = document.createElement('div');
+    dot.className = 'step-dot' + (r >= m ? ' done' : '');
+    ind.appendChild(dot);
+    
+    const lbl = document.createElement('span');
+    lbl.textContent = m.toLocaleString() + t(' รอบ', ' Draws');
+    lbl.style.marginRight = '8px';
+    ind.appendChild(lbl);
+  });
+}
+
+// Init
+setLang('th');
+resetAll();
+window.addEventListener('resize', ()=>{ drawPop(); drawSmp(); });
+</script>
+</body>
+</html>

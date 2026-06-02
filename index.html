@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Interactive Statistics Visualizations</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { 
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; 
+    background: #f8f9fa; 
+    color: #212529; 
+    min-height: 100vh;
+    padding-bottom: 40px;
+  }
+  .header { 
+    background: #ffffff; 
+    border-bottom: 3px solid #0d6efd; 
+    padding: 40px 24px; 
+    text-align: center;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+  }
+  .header h1 { 
+    font-size: 32px; 
+    font-weight: 700; 
+    color: #0d6efd;
+    margin-bottom: 12px;
+  }
+  .header p { 
+    font-size: 18px; 
+    color: #6c757d; 
+    max-width: 700px;
+    margin: 0 auto;
+    line-height: 1.5;
+  }
+  .container { 
+    max-width: 1100px; 
+    margin: 40px auto; 
+    padding: 0 24px; 
+  }
+  .grid { 
+    display: grid; 
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); 
+    gap: 24px; 
+  }
+  .card { 
+    background: #ffffff; 
+    border: 1px solid #dee2e6; 
+    border-radius: 12px; 
+    padding: 24px; 
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+  .card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+  }
+  .card-title { 
+    font-size: 22px; 
+    font-weight: 700; 
+    color: #212529;
+    margin-bottom: 10px; 
+  }
+  .card-desc { 
+    font-size: 15px; 
+    color: #495057; 
+    line-height: 1.6;
+    margin-bottom: 24px;
+  }
+  .btn { 
+    display: inline-block; 
+    background: #0d6efd; 
+    color: #fff; 
+    text-decoration: none; 
+    padding: 10px 20px; 
+    border-radius: 6px; 
+    font-weight: 600; 
+    text-align: center;
+    transition: background 0.2s;
+  }
+  .btn:hover { 
+    background: #0b5ed7; 
+  }
+  .btn-disabled {
+    background: #e9ecef;
+    color: #adb5bd;
+    cursor: not-allowed;
+    pointer-events: none;
+  }
+  .badge {
+    display: inline-block;
+    padding: 4px 8px;
+    font-size: 12px;
+    font-weight: 600;
+    border-radius: 4px;
+    margin-bottom: 12px;
+    width: fit-content;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .badge-ready { background: #d1e7dd; color: #0f5132; }
+  .badge-soon { background: #fff3cd; color: #664d03; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>Interactive Statistics Visualizations</h1>
+  <p>A collection of web-based interactive simulators designed to help students visualize and grasp core statistical concepts and theories.</p>
+</div>
+
+<div class="container">
+  <div class="grid">
+    
+    <div class="card">
+      <div>
+        <span class="badge badge-ready">Available</span>
+        <div class="card-title">Sampling Techniques</div>
+        <p class="card-desc">Simulate various probability sampling methods—including Simple Random, Systematic, Stratified, and Cluster Sampling—to visualize selection bias and sample representativeness.</p>
+      </div>
+      <a href="sampling-explorer.html" class="btn">Launch Simulator</a>
+    </div>
+
+    <div class="card">
+      <div>
+        <span class="badge badge-ready">Available</span>
+        <div class="card-title">Law of Large Numbers</div>
+        <p class="card-desc">Visualize the convergence of empirical results toward expected theoretical values. Simulate thousands of coin flips or dice rolls to see the law in action.</p>
+      </div>
+      <a href="lln_simulator.html" class="btn">Launch Simulator</a>
+    </div>
+
+    <div class="card">
+      <div>
+        <span class="badge badge-ready">Available</span>
+        <div class="card-title">Normal Distribution</div>
+        <p class="card-desc">Dynamically adjust the mean (μ) and standard deviation (σ) to observe shifting and scaling of the bell curve. Interactively calculate shaded probabilities and Z-scores.</p>
+      </div>
+      <a href="normal_distribution.html" class="btn">Launch Simulator</a>
+    </div>
+
+    <div class="card">
+      <div>
+        <span class="badge badge-ready">Available</span>
+        <div class="card-title">Central Limit Theorem</div>
+        <p class="card-desc">Draw random samples of size n from various non-normal populations (skewed, uniform, bimodal). Watch the sampling distribution of the sample mean (x̄) shape into a normal curve.</p>
+      </div>
+      <a href="clt_simulator.html" class="btn">Launch Simulator</a>
+    </div>
+
+    <div class="card">
+      <div>
+        <span class="badge badge-ready">Available</span>
+        <div class="card-title">Confidence Interval</div>
+        <p class="card-desc">Simulate drawing 100 independent samples to construct confidence intervals. See how many intervals successfully capture the true population parameter based on the chosen confidence level.</p>
+      </div>
+      <a href="ci-visualizer.html" class="btn">Launch Simulator</a>
+    </div>
+
+    <div class="card">
+      <div>
+        <span class="badge badge-ready">Available</span>
+        <div class="card-title">Type I & II Errors</div>
+        <p class="card-desc">Visualize the trade-off between alpha (Type I error) and beta (Type II error) using overlapping null and alternative hypothesis distributions. Move the critical value line to see statistics in action.</p>
+      </div>
+      <a href="type_errors.html" class="btn">Launch Simulator</a>
+    </div>
+
+    <div class="card">
+      <div>
+        <span class="badge badge-ready">Available</span>
+        <div class="card-title">Linear Regression</div>
+        <p class="card-desc">Plot data points interactively on a scatter plot to instantly calculate the correlation coefficient (r) and the line of best fit. Observe the dramatic impact of introducing outliers.</p>
+      </div>
+      <a href="linear_regression.html" class="btn">Launch Simulator</a>
+    </div>
+
+    <div class="card">
+      <div>
+        <span class="badge badge-soon">Coming Soon</span>
+        <div class="card-title">P-Hacking Simulator</div>
+        <p class="card-desc">Experiment with "p-hacking" by repeatedly running non-significant experiments and selectively reporting only those that achieve p < 0.05 by pure chance. Understand the file drawer effect.</p>
+      </div>
+      <a href="#" class="btn btn-disabled">Coming Soon</a>
+    </div>
+
+    <div class="card">
+      <div>
+        <span class="badge badge-ready">Available</span>
+        <div class="card-title">Bayes' Theorem</div>
+        <p class="card-desc">Explore conditional probability and medical testing. Adjust base rates, sensitivity, and specificity to visually understand the impact of false positives in a population.</p>
+      </div>
+      <a href="bayes_theorem.html" class="btn">Launch Simulator</a>
+    </div>
+
+    <div class="card">
+      <div>
+        <span class="badge badge-ready">Available</span>
+        <div class="card-title">ANOVA Simulator</div>
+        <p class="card-desc">Understand Analysis of Variance by manipulating between-group and within-group variances. See how group separation and data spread affect the F-statistic in real-time.</p>
+      </div>
+      <a href="anova_simulator.html" class="btn">Launch Simulator</a>
+    </div>
+
+    <div class="card">
+      <div>
+        <span class="badge badge-soon">Coming Soon</span>
+        <div class="card-title">Simpson's Paradox</div>
+        <p class="card-desc">Discover how hidden confounding variables can reverse statistical trends. Group data points to reveal how overall negative correlations can magically become positive within subgroups.</p>
+      </div>
+      <a href="#" class="btn btn-disabled">Coming Soon</a>
+    </div>
+
+    <div class="card">
+      <div>
+        <span class="badge badge-ready">Available</span>
+        <div class="card-title">t-Distribution vs Normal</div>
+        <p class="card-desc">Compare the Student's t-distribution with the standard normal curve. Adjust the degrees of freedom (sample size) to observe the shrinking of "fat tails" as n increases.</p>
+      </div>
+      <a href="t-distribution.html" class="btn">Launch Simulator</a>
+    </div>
+
+    <div class="card">
+      <div>
+        <span class="badge badge-ready">Available</span>
+        <div class="card-title">Bootstrapping Simulator</div>
+        <p class="card-desc">Learn modern resampling techniques. Draw random samples with replacement from a small dataset to build empirical confidence intervals without relying on strict parametric assumptions.</p>
+      </div>
+      <a href="bootstrapping_simulator.html" class="btn">Launch Simulator</a>
+    </div>
+
+  </div>
+</div>
+
+</body>
+</html>
