@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Binomial → Poisson Approximation</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;600;700;800&family=IBM+Plex+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: "Noto Sans Thai","IBM Plex Sans",sans-serif; font-size: 18px; font-weight: 600; background: #f5f5f5; color: #1a1a1a; min-height: 100vh; }
+
+.header { background: #fff; border-bottom: 3px solid #1a1a1a; padding: 16px 32px; display: flex; align-items: center; justify-content: space-between; }
+.header-left { display: flex; align-items: baseline; gap: 14px; }
+.header h1 { font-size: 28px; font-weight: 800; }
+
+.home-btn { text-decoration: none; color: #6c757d; font-size: 15px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border: 1px solid #dee2e6; border-radius: 6px; background: #fff; transition: all 0.2s; flex-shrink: 0; }
+.home-btn:hover { background: #f8f9fa; color: #0d6efd; }
+
+.lang-toggle { display: flex; border: 2px solid #1a1a1a; border-radius: 8px; overflow: hidden; }
+.lang-btn { font-family: inherit; font-size: 16px; font-weight: 700; padding: 6px 16px; border: none; cursor: pointer; background: #fff; color: #888; transition: all .12s; }
+.lang-btn.active { background: #1a1a1a; color: #fff; }
+
+.main { max-width: 1000px; margin: 24px auto; padding: 0 24px; }
+.card { background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 20px; margin-bottom: 16px; }
+.card-title { font-size: 20px; font-weight: 800; margin-bottom: 14px; border-bottom: 1px solid #eee; padding-bottom: 8px; }
+
+/* Layout */
+.layout { display: grid; grid-template-columns: 320px 1fr; gap: 20px; }
+@media (max-width: 850px) { .layout { grid-template-columns: 1fr; } }
+
+/* Controls */
+.slider-group { margin-bottom: 20px; }
+.slider-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px; }
+.slider-name { font-size: 16px; font-weight: 700; }
+.slider-val { font-size: 22px; font-weight: 800; min-width: 48px; text-align: right; }
+input[type=range] { width: 100%; cursor: pointer; }
+input[type=range]#nSlider { accent-color: #4dabf7; }
+input[type=range]#pSlider { accent-color: #ff6b6b; }
+.slider-ticks { display: flex; justify-content: space-between; font-size: 13px; font-weight: 600; color: #999; margin-top: 2px; }
+
+/* Lambda box */
+.formula-box { background: #1a1a1a; color: #fff; border-radius: 6px; padding: 12px; text-align: center; font-size: 18px; font-family: "IBM Plex Sans", sans-serif; letter-spacing: 1px; margin-bottom: 16px; }
+.formula-box .lam-val { color: #51cf66; font-size: 28px; font-weight: 800; }
+.formula-box .lam-eq { color: #aaa; font-size: 15px; margin-top: 4px; }
+
+/* Quality badge */
+.quality-badge { display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px; border-radius: 20px; font-size: 14px; font-weight: 700; margin-top: 10px; width: 100%; justify-content: center; }
+.q-good { background: #d3f9d8; color: #2f9e44; }
+.q-ok   { background: #fff3bf; color: #e67700; }
+.q-bad  { background: #ffe3e3; color: #c92a2a; }
+
+/* Canvas */
+canvas { width: 100%; display: block; border-radius: 4px; background: #fff; border: 1px solid #eee; }
+
+/* Stats */
+.stat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 16px; }
+.stat { background: #f8f9fa; border: 1px solid #e0e0e0; border-radius: 6px; padding: 12px; text-align: center; }
+.stat-val { font-size: 22px; font-weight: 800; font-family: "IBM Plex Sans", sans-serif; }
+.stat-lbl { font-size: 13px; font-weight: 600; color: #555; margin-top: 2px; }
+
+.legend { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 12px; justify-content: center; }
+.legend-item { display: flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 600; color: #555; }
+.legend-color { width: 14px; height: 14px; border-radius: 3px; }
+
+/* Rules */
+.rule-list { margin-top: 12px; display: flex; flex-direction: column; gap: 8px; }
+.rule { display: flex; align-items: center; gap: 10px; font-size: 15px; color: #444; background: #f8f9fa; border-radius: 6px; padding: 8px 12px; }
+.rule-icon { font-size: 18px; flex-shrink: 0; }
+
+.insight { font-size: 16px; font-weight: 600; color: #333; background: #f8f9fa; border-left: 4px solid #0d6efd; padding: 12px 16px; border-radius: 0 6px 6px 0; margin-top: 16px; line-height: 1.5; }
+.insight.good { border-left-color: #20c997; background: #e6fcf5; }
+.insight.warn { border-left-color: #f59f00; background: #fff9db; }
+.insight.bad  { border-left-color: #fa5252; background: #fff5f5; }
+
+.questions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.q-chip { font-size: 15px; font-weight: 600; padding: 6px 14px; border: 1px solid #bbb; border-radius: 20px; color: #444; background: #fafafa; line-height: 1.4; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-left">
+    <a href="index.html" class="home-btn" data-th="← หน้าแรก" data-en="← Home">← Home</a>
+    <h1 data-th="Binomial → Poisson" data-en="Binomial → Poisson">Binomial → Poisson</h1>
+  </div>
+  <div class="lang-toggle">
+    <button class="lang-btn active" onclick="setLang('th')">TH</button>
+    <button class="lang-btn" onclick="setLang('en')">EN</button>
+  </div>
+</div>
+
+<div class="main">
+  <div class="layout">
+
+    <!-- LEFT PANEL -->
+    <div>
+      <div class="card">
+        <div class="card-title" data-th="ปรับพารามิเตอร์" data-en="Adjust Parameters">ปรับพารามิเตอร์</div>
+
+        <div class="formula-box">
+          λ = n × p = <span class="lam-val" id="lambdaVal">5.00</span>
+          <div class="lam-eq" id="lambdaEq">= 100 × 0.050</div>
+        </div>
+
+        <div class="slider-group">
+          <div class="slider-header">
+            <span class="slider-name" data-th="จำนวนการทดลอง (n)" data-en="Number of trials (n)">จำนวนการทดลอง (n)</span>
+            <span class="slider-val" style="color:#4dabf7;" id="nVal">100</span>
+          </div>
+          <input type="range" id="nSlider" min="10" max="500" value="100" step="5" oninput="update()">
+          <div class="slider-ticks"><span>10</span><span>500</span></div>
+        </div>
+
+        <div class="slider-group">
+          <div class="slider-header">
+            <span class="slider-name" data-th="ความน่าจะเป็น (p)" data-en="Probability (p)">ความน่าจะเป็น (p)</span>
+            <span class="slider-val" style="color:#ff6b6b;" id="pVal">0.050</span>
+          </div>
+          <input type="range" id="pSlider" min="1" max="200" value="50" step="1" oninput="update()">
+          <div class="slider-ticks"><span>0.005</span><span>0.200</span></div>
+        </div>
+
+        <div id="qualityBadge" class="quality-badge q-ok">⚠ Fair approximation</div>
+
+        <div class="rule-list">
+          <div class="rule"><span class="rule-icon" id="rN">⚪</span><span data-th="n ≥ 20 (จำนวนการทดลองมากพอ)" data-en="n ≥ 20 (enough trials)">n ≥ 20 (จำนวนการทดลองมากพอ)</span></div>
+          <div class="rule"><span class="rule-icon" id="rP">⚪</span><span data-th="p ≤ 0.05 (เหตุการณ์หายาก)" data-en="p ≤ 0.05 (rare event)">p ≤ 0.05 (เหตุการณ์หายาก)</span></div>
+          <div class="rule"><span class="rule-icon" id="rL">⚪</span><span data-th="λ = np < 10 (อัตราไม่สูงเกินไป)" data-en="λ = np < 10 (moderate rate)">λ = np &lt; 10 (อัตราไม่สูงเกินไป)</span></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title" data-th="คำถามชวนคิด" data-en="Discussion Questions">คำถามชวนคิด</div>
+        <div class="questions">
+          <div class="q-chip" data-th="ถ้า n เพิ่มขึ้นแต่ λ คงที่ (p ลดลง) กราฟเปลี่ยนอย่างไร?" data-en="If n increases but λ stays fixed (p decreases), what happens?">ถ้า n เพิ่มขึ้นแต่ λ คงที่ (p ลดลง) กราฟเปลี่ยนอย่างไร?</div>
+          <div class="q-chip" data-th="ทำไม Poisson ถึงใช้แค่ 1 พารามิเตอร์ แต่ Binomial ต้องใช้ 2?" data-en="Why does Poisson need only 1 parameter while Binomial needs 2?">ทำไม Poisson ถึงใช้แค่ 1 พารามิเตอร์ แต่ Binomial ต้องใช้ 2?</div>
+          <div class="q-chip" data-th="ลอง p = 0.2 แล้วดูว่าการประมาณค่าพังอย่างไร" data-en="Try p = 0.2 and see how the approximation breaks down">ลอง p = 0.2 แล้วดูว่าการประมาณค่าพังอย่างไร</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT PANEL -->
+    <div>
+      <div class="card">
+        <div class="card-title" data-th="การแจกแจงความน่าจะเป็น" data-en="Probability Distribution">การแจกแจงความน่าจะเป็น</div>
+
+        <div class="legend">
+          <div class="legend-item"><div class="legend-color" style="background:#4dabf7;"></div><span>Binomial(n, p)</span></div>
+          <div class="legend-item"><div class="legend-color" style="background:#ff6b6b; opacity:0.85;"></div><span>Poisson(λ = np)</span></div>
+        </div>
+
+        <canvas id="cvs" height="300" style="margin-top:12px;"></canvas>
+
+        <div class="stat-grid">
+          <div class="stat" style="border-bottom:3px solid #4dabf7;">
+            <div class="stat-val" style="color:#4dabf7;" id="sBinMean">—</div>
+            <div class="stat-lbl" data-th="ค่าเฉลี่ย Binomial" data-en="Binomial Mean">ค่าเฉลี่ย Binomial</div>
+          </div>
+          <div class="stat" style="border-bottom:3px solid #ff6b6b;">
+            <div class="stat-val" style="color:#ff6b6b;" id="sPoiMean">—</div>
+            <div class="stat-lbl" data-th="ค่าเฉลี่ย Poisson (λ)" data-en="Poisson Mean (λ)">ค่าเฉลี่ย Poisson (λ)</div>
+          </div>
+          <div class="stat" style="background:#343a40; color:#fff;">
+            <div class="stat-val" id="sOverlap">—</div>
+            <div class="stat-lbl" style="color:#aaa;" data-th="ความทับซ้อน" data-en="Overlap">ความทับซ้อน</div>
+          </div>
+        </div>
+
+        <div class="insight" id="insight"></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// --- Language ---
+var currentLang = 'th';
+function t(th, en) { return currentLang === 'en' ? en : th; }
+function setLang(lang) {
+  currentLang = lang;
+  document.querySelectorAll('.lang-btn').forEach(b => b.classList.toggle('active', b.textContent.trim().toLowerCase() === lang));
+  document.querySelectorAll('[data-th]').forEach(el => {
+    var val = el.getAttribute('data-' + lang);
+    if (val) el.innerHTML = val;
+  });
+  update();
+}
+
+// --- Math helpers ---
+function logFact(n) {
+  if (n <= 1) return 0;
+  let s = 0;
+  for (let i = 2; i <= n; i++) s += Math.log(i);
+  return s;
+}
+function binomPMF(k, n, p) {
+  if (p === 0) return k === 0 ? 1 : 0;
+  if (p === 1) return k === n ? 1 : 0;
+  return Math.exp(logFact(n) - logFact(k) - logFact(n - k) + k * Math.log(p) + (n - k) * Math.log(1 - p));
+}
+function poisPMF(k, lam) {
+  if (lam === 0) return k === 0 ? 1 : 0;
+  return Math.exp(k * Math.log(lam) - lam - logFact(k));
+}
+
+// --- Canvas ---
+const canvas = document.getElementById('cvs');
+const ctx = canvas.getContext('2d');
+
+function resizeCanvas() {
+  const W = canvas.parentElement.clientWidth - 40;
+  const H = 300;
+  canvas.style.width = W + 'px';
+  canvas.style.height = H + 'px';
+  canvas.width = W * (window.devicePixelRatio || 1);
+  canvas.height = H * (window.devicePixelRatio || 1);
+  ctx.scale(window.devicePixelRatio || 1, window.devicePixelRatio || 1);
+  update();
+}
+window.addEventListener('resize', resizeCanvas);
+
+function getN() { return parseInt(document.getElementById('nSlider').value); }
+function getP() { return parseInt(document.getElementById('pSlider').value) / 1000; }
+
+function update() {
+  const n = getN();
+  const p = getP();
+  const lam = n * p;
+
+  document.getElementById('nVal').textContent = n;
+  document.getElementById('pVal').textContent = p.toFixed(3);
+  document.getElementById('lambdaVal').textContent = lam.toFixed(2);
+  document.getElementById('lambdaEq').textContent = '= ' + n + ' × ' + p.toFixed(3);
+
+  // k range
+  const sd = Math.sqrt(n * p * (1 - p));
+  const kMax = Math.min(n, Math.max(Math.ceil(lam + 4.5 * sd), 20));
+  const ks = Array.from({length: kMax + 1}, (_, i) => i);
+
+  const bProbs = ks.map(k => binomPMF(k, n, p));
+  const pProbs = ks.map(k => poisPMF(k, lam));
+
+  // Stats
+  const overlap = ks.reduce((s, k, i) => s + Math.min(bProbs[i], pProbs[i]), 0);
+  const overlapPct = (overlap * 100).toFixed(1);
+
+  document.getElementById('sBinMean').textContent = (n * p).toFixed(2);
+  document.getElementById('sPoiMean').textContent = lam.toFixed(2);
+  document.getElementById('sOverlap').textContent = overlapPct + '%';
+
+  // Rules
+  const ruleN = n >= 20;
+  const ruleP = p <= 0.05;
+  const ruleL = lam < 10;
+  document.getElementById('rN').textContent = ruleN ? '✅' : '❌';
+  document.getElementById('rP').textContent = ruleP ? '✅' : '❌';
+  document.getElementById('rL').textContent = ruleL ? '✅' : '⚠️';
+
+  const good = [ruleN, ruleP, ruleL].filter(Boolean).length;
+  const badge = document.getElementById('qualityBadge');
+  if (good === 3) {
+    badge.className = 'quality-badge q-good';
+    badge.textContent = t('✓ การประมาณค่าดีเยี่ยม', '✓ Excellent approximation');
+  } else if (good === 2) {
+    badge.className = 'quality-badge q-ok';
+    badge.textContent = t('⚠ การประมาณค่าพอใช้', '⚠ Fair approximation');
+  } else {
+    badge.className = 'quality-badge q-bad';
+    badge.textContent = t('✗ การประมาณค่าไม่ดี', '✗ Poor approximation');
+  }
+
+  // Insight
+  const ins = document.getElementById('insight');
+  if (good === 3) {
+    ins.className = 'insight good';
+    ins.innerHTML = t(
+      `<b>กราฟทั้งสองทับซ้อนกัน ${overlapPct}%!</b> เมื่อ n มากและ p น้อย โครงสร้าง Binomial ยุบรวมเป็น Poisson ที่ใช้แค่พารามิเตอร์เดียวคือ λ = np นี่คือเหตุผลที่เราใช้ Poisson ในการนับเหตุการณ์หายาก เช่น อุบัติเหตุ ข้อผิดพลาด หรือการมาถึง`,
+      `<b>The two distributions overlap ${overlapPct}%!</b> When n is large and p is small, the Binomial collapses into Poisson — just one parameter λ = np instead of two. This is why Poisson models rare events like accidents, defects, or arrivals.`
+    );
+  } else if (!ruleP) {
+    ins.className = 'insight bad';
+    ins.innerHTML = t(
+      `<b>p = ${p.toFixed(3)} ใหญ่เกินไป</b> Poisson ถูกออกแบบสำหรับเหตุการณ์หายาก เมื่อ p สูง ขอบบน n ของ Binomial มีความสำคัญ และกราฟทั้งสองจะแยกออกจากกันอย่างชัดเจน ลอง p ≤ 0.05`,
+      `<b>p = ${p.toFixed(3)} is too large.</b> Poisson was designed for rare events. When p is high, the upper bound n of Binomial matters and the two distributions diverge visibly. Try p ≤ 0.05.`
+    );
+  } else if (!ruleN) {
+    ins.className = 'insight bad';
+    ins.innerHTML = t(
+      `<b>n = ${n} น้อยเกินไป</b> เพิ่มจำนวนการทดลองขึ้น เพื่อให้ขอบบน n ไม่มีผลต่อรูปร่างของการแจกแจง และกราฟทั้งสองจะบรรจบกัน`,
+      `<b>n = ${n} is too small.</b> Increase the number of trials so the ceiling at n becomes irrelevant to the distribution shape and the two curves converge.`
+    );
+  } else {
+    ins.className = 'insight warn';
+    ins.innerHTML = t(
+      `<b>λ = ${lam.toFixed(2)} ค่อนข้างสูง</b> การประมาณค่าทำงานได้ดีที่สุดเมื่อ λ < 10 ลอง ลด n หรือ p เพื่อให้ค่าที่คาดหวังลดลง`,
+      `<b>λ = ${lam.toFixed(2)} is quite high.</b> The approximation works best when λ < 10. Try reducing n or p to bring the expected count down.`
+    );
+  }
+
+  drawChart(ks, bProbs, pProbs);
+}
+
+function drawChart(ks, bProbs, pProbs) {
+  if (!canvas.offsetWidth) return;
+  const W = canvas.offsetWidth;
+  const H = canvas.offsetHeight;
+  ctx.clearRect(0, 0, W, H);
+
+  const padL = 50, padR = 16, padT = 16, padB = 40;
+  const cw = W - padL - padR;
+  const ch = H - padT - padB;
+  const maxP = Math.max(...bProbs, ...pProbs) * 1.12;
+  const nK = ks.length;
+  const slot = cw / nK;
+  const bw = Math.max(2, slot * 0.38);
+
+  // Gridlines + y-axis labels
+  ctx.strokeStyle = '#f1f3f5';
+  ctx.lineWidth = 1;
+  ctx.fillStyle = '#999';
+  ctx.font = '11px IBM Plex Sans, system-ui';
+  ctx.textAlign = 'right';
+  for (let i = 0; i <= 4; i++) {
+    const y = padT + ch - (i / 4) * ch;
+    ctx.beginPath(); ctx.moveTo(padL, y); ctx.lineTo(padL + cw, y); ctx.stroke();
+    ctx.fillText(((i / 4) * maxP).toFixed(3), padL - 5, y + 4);
+  }
+
+  // Axes
+  ctx.strokeStyle = '#ddd'; ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(padL, padT); ctx.lineTo(padL, padT + ch); ctx.lineTo(padL + cw, padT + ch);
+  ctx.stroke();
+
+  // Bars
+  ks.forEach((k, i) => {
+    const cx = padL + i * slot + slot / 2;
+
+    // Binomial
+    const bh = (bProbs[i] / maxP) * ch;
+    ctx.fillStyle = 'rgba(77, 171, 247, 0.88)';
+    ctx.fillRect(cx - bw - 1, padT + ch - bh, bw, bh);
+
+    // Poisson
+    const ph = (pProbs[i] / maxP) * ch;
+    ctx.fillStyle = 'rgba(250, 82, 82, 0.80)';
+    ctx.fillRect(cx + 1, padT + ch - ph, bw, ph);
+
+    // X label
+    const step = nK > 30 ? 5 : nK > 15 ? 2 : 1;
+    if (k % step === 0) {
+      ctx.fillStyle = '#888';
+      ctx.font = '11px IBM Plex Sans, system-ui';
+      ctx.textAlign = 'center';
+      ctx.fillText(k, cx, padT + ch + 16);
+    }
+  });
+
+  // X-axis label
+  ctx.fillStyle = '#555';
+  ctx.font = '12px IBM Plex Sans, system-ui';
+  ctx.textAlign = 'center';
+  ctx.fillText('k', padL + cw / 2, padT + ch + 34);
+}
+
+// Init
+setTimeout(resizeCanvas, 50);
+setLang('th');
+</script>
+</body>
+</html>
