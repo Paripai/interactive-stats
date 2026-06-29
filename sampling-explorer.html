@@ -69,7 +69,7 @@ select { font-family: inherit; font-size: 16px; font-weight: 700; padding: 5px 1
 .btn:hover { background: #333; }
 
 /* Canvas */
-canvas { display: block; border-radius: 6px; width: 100%; }
+canvas { display: block; border-radius: 6px; width: 100%; height: 320px; }
 
 /* Legend */
 .legend { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 10px; }
@@ -701,7 +701,7 @@ function redrawAll(id) {
 
 function getCtx(id) {
   var cvs=document.getElementById(id), DPR=window.devicePixelRatio||1;
-  var W=cvs.offsetWidth, H=parseInt(cvs.getAttribute('height'));
+  var W=cvs.offsetWidth, H=cvs.offsetHeight;
   cvs.width=W*DPR; cvs.height=H*DPR;
   var ctx=cvs.getContext('2d'); ctx.scale(DPR,DPR);
   return {ctx:ctx,W:W,H:H};
