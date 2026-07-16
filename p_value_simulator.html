@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>p-value Simulator | Interactive Statistics</title>
+<style>
+  :root{
+    --bg:#f5f6fa; --panel:#ffffff; --ink:#1f2430; --muted:#6b7280;
+    --line:#e5e7eb; --brand:#4f46e5; --brand-soft:#eef2ff;
+    --curve:#2563eb; --curve-fill:rgba(37,99,235,.12);
+    --reject:#dc2626; --reject-fill:rgba(220,38,38,.28);
+    --ok:#059669; --accent:#0891b2;
+    --shadow:0 1px 3px rgba(16,24,40,.06),0 6px 24px rgba(16,24,40,.06);
+    --radius:14px;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    font-family:"Segoe UI",system-ui,-apple-system,"Noto Sans Thai",sans-serif;
+    background:var(--bg); color:var(--ink); line-height:1.6;
+    -webkit-font-smoothing:antialiased;
+  }
+  a{color:var(--brand);text-decoration:none}
+  .wrap{max-width:1120px;margin:0 auto;padding:20px 18px 60px}
+  .topbar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}
+  .home{font-size:14px;color:var(--muted);display:inline-flex;align-items:center;gap:6px}
+  .home:hover{color:var(--brand)}
+  .langtoggle{display:inline-flex;background:var(--panel);border:1px solid var(--line);
+    border-radius:999px;padding:3px;box-shadow:var(--shadow)}
+  .langtoggle button{border:0;background:transparent;padding:6px 14px;border-radius:999px;
+    font-size:13px;font-weight:600;color:var(--muted);cursor:pointer}
+  .langtoggle button.active{background:var(--brand);color:#fff}
+  header.hero{margin:6px 0 22px}
+  header.hero h1{font-size:30px;margin:0 0 6px;letter-spacing:-.5px}
+  header.hero p{margin:0;color:var(--muted);max-width:70ch}
+  .layout{display:grid;grid-template-columns:340px 1fr;gap:20px;align-items:start}
+  @media (max-width:880px){.layout{grid-template-columns:1fr}}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+    box-shadow:var(--shadow);padding:18px}
+  .card h2{font-size:15px;margin:0 0 14px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted)}
+  .seg{display:flex;gap:6px;background:var(--bg);border-radius:10px;padding:4px;margin-bottom:8px;flex-wrap:wrap}
+  .seg button{flex:1;min-width:70px;border:0;background:transparent;padding:8px 6px;border-radius:8px;
+    font-size:13px;font-weight:600;color:var(--muted);cursor:pointer;transition:.15s}
+  .seg button.active{background:var(--panel);color:var(--brand);box-shadow:var(--shadow)}
+  .seg button:disabled{opacity:.35;cursor:not-allowed}
+  .field{margin:16px 0}
+  .field label{display:flex;justify-content:space-between;align-items:baseline;font-size:13px;
+    font-weight:600;margin-bottom:6px}
+  .field label .val{font-variant-numeric:tabular-nums;color:var(--brand);font-size:14px}
+  input[type=range]{width:100%;accent-color:var(--brand);height:22px}
+  .hint{font-size:12px;color:var(--muted);margin-top:4px}
+  .note{font-size:12.5px;background:var(--brand-soft);color:#3730a3;border-radius:10px;
+    padding:10px 12px;margin-top:6px}
+  .stage{display:flex;flex-direction:column;gap:16px}
+  .plotwrap{position:relative}
+  canvas{width:100%;display:block;border-radius:10px}
+  .legend{display:flex;gap:16px;flex-wrap:wrap;font-size:12.5px;color:var(--muted);margin-top:10px}
+  .legend span{display:inline-flex;align-items:center;gap:6px}
+  .swatch{width:14px;height:14px;border-radius:4px;display:inline-block}
+  .results{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+  @media (max-width:560px){.results{grid-template-columns:1fr}}
+  .stat{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+  .stat .k{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
+  .stat .v{font-size:26px;font-weight:700;font-variant-numeric:tabular-nums;margin-top:2px}
+  .decision{border-radius:12px;padding:14px 16px;font-weight:600;font-size:15px;border:1px solid}
+  .decision.reject{background:#fef2f2;border-color:#fecaca;color:#b91c1c}
+  .decision.fail{background:#ecfdf5;border-color:#a7f3d0;color:#047857}
+  .story{font-size:14.5px}
+  .story b{color:var(--ink)}
+  .misconception{border-left:4px solid #f59e0b;background:#fffbeb;padding:12px 14px;border-radius:0 10px 10px 0;
+    font-size:13.5px;color:#92400e}
+  .misconception b{color:#78350f}
+  .qs{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px}
+  .qs li{background:var(--bg);border-radius:10px;padding:12px 14px;font-size:14px}
+  .qs li::before{content:"?";display:inline-flex;width:22px;height:22px;border-radius:50%;
+    background:var(--brand);color:#fff;align-items:center;justify-content:center;font-weight:700;
+    font-size:13px;margin-right:10px;vertical-align:middle}
+  footer{margin-top:32px;text-align:center;color:var(--muted);font-size:12.5px}
+  [data-lang-en]{display:none}
+  body.en [data-lang-th]{display:none}
+  body.en [data-lang-en]{display:inline}
+  body.en [data-lang-en].block{display:block}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="topbar">
+    <a class="home" href="index.html">
+      <span>&larr;</span>
+      <span data-lang-th>หน้าแรก</span><span data-lang-en>Home</span>
+    </a>
+    <div class="langtoggle">
+      <button id="btnTH" class="active" onclick="setLang('th')">TH</button>
+      <button id="btnEN" onclick="setLang('en')">EN</button>
+    </div>
+  </div>
+
+  <header class="hero">
+    <h1>p-value</h1>
+    <p data-lang-th class="block">ลากสไลเดอร์เพื่อดูว่า <b>p-value คือพื้นที่หางของการแจกแจงภายใต้สมมติฐานหลัก (H₀)</b> — ไม่ใช่ความน่าจะเป็นที่ H₀ เป็นจริง ลองเปลี่ยนการแจกแจง ขนาดตัวอย่าง และค่าที่สังเกตได้ แล้วสังเกตว่า p เปลี่ยนอย่างไร</p>
+    <p data-lang-en class="block">Drag the sliders to see that <b>a p-value is the tail area of the distribution assuming the null hypothesis (H₀) is true</b> — not the probability that H₀ is true. Switch distributions, sample size, and the observed statistic, and watch p change.</p>
+  </header>
+
+  <div class="layout">
+
+    <!-- CONTROL PANEL -->
+    <aside class="card">
+      <h2 data-lang-th>ตั้งค่าพารามิเตอร์</h2><h2 data-lang-en>Parameters</h2>
+
+      <div class="field">
+        <label><span data-lang-th>การแจกแจงที่ใช้ทดสอบ</span><span data-lang-en>Test distribution</span></label>
+        <div class="seg" id="segTest">
+          <button data-test="z" class="active" onclick="setTest('z')">z (Normal)</button>
+          <button data-test="t" onclick="setTest('t')">t</button>
+          <button data-test="f" onclick="setTest('f')">F</button>
+        </div>
+        <div class="hint" id="testHint"></div>
+      </div>
+
+      <div class="field" id="tailField">
+        <label><span data-lang-th>ทิศทางการทดสอบ (หาง)</span><span data-lang-en>Tail direction</span></label>
+        <div class="seg" id="segTail">
+          <button data-tail="two" class="active" onclick="setTail('two')"><span data-lang-th>สองด้าน</span><span data-lang-en>Two-tailed</span></button>
+          <button data-tail="right" onclick="setTail('right')"><span data-lang-th>ขวา</span><span data-lang-en>Right</span></button>
+          <button data-tail="left" onclick="setTail('left')"><span data-lang-th>ซ้าย</span><span data-lang-en>Left</span></button>
+        </div>
+        <div class="note" id="tailNote" style="display:none">
+          <span data-lang-th>การทดสอบ F เป็นการทดสอบ <b>ด้านเดียว (หางขวา)</b> เสมอ เพราะ F = อัตราส่วนความแปรปรวน ยิ่งกลุ่มต่างกันมาก F ยิ่งใหญ่ไปทางขวา</span>
+          <span data-lang-en>The F-test is always <b>one-tailed (right)</b>: F is a ratio of variances, so bigger group differences push F to the right tail.</span>
+        </div>
+      </div>
+
+      <div class="field" id="contextField">
+        <label><span data-lang-th>บริบทตัวอย่าง</span><span data-lang-en>Example context</span></label>
+        <div class="seg" id="segCtx">
+          <button data-ctx="coin" class="active" onclick="setCtx('coin')"><span data-lang-th>เหรียญ</span><span data-lang-en>Coin</span></button>
+          <button data-ctx="drug" onclick="setCtx('drug')"><span data-lang-th>ยา/การทดลอง</span><span data-lang-en>Drug/trial</span></button>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>
+          <span id="statLabel"></span>
+          <span class="val" id="statVal"></span>
+        </label>
+        <input type="range" id="statSlider" min="0" max="500" value="220">
+        <div class="hint" id="statHint"></div>
+      </div>
+
+      <div class="field" id="dfField">
+        <label>
+          <span data-lang-th>ขนาดตัวอย่าง n (df)</span><span data-lang-en>Sample size n (df)</span>
+          <span class="val" id="nVal"></span>
+        </label>
+        <input type="range" id="nSlider" min="3" max="120" value="15">
+        <div class="hint" id="dfHint"></div>
+      </div>
+
+      <div class="field" id="df2Field" style="display:none">
+        <label>
+          <span data-lang-th>ขนาดกลุ่มที่สอง n₂ (df₂)</span><span data-lang-en>Second group n₂ (df₂)</span>
+          <span class="val" id="n2Val"></span>
+        </label>
+        <input type="range" id="n2Slider" min="3" max="120" value="15">
+      </div>
+
+      <div class="field">
+        <label>
+          <span data-lang-th>ระดับนัยสำคัญ α</span><span data-lang-en>Significance level α</span>
+          <span class="val" id="aVal"></span>
+        </label>
+        <input type="range" id="aSlider" min="1" max="20" value="5">
+        <div class="hint"><span data-lang-th>เส้นแบ่งที่เราเลือกเอง — 0.05 ไม่ใช่ค่าศักดิ์สิทธิ์</span><span data-lang-en>A line we choose — 0.05 is not sacred.</span></div>
+      </div>
+    </aside>
+
+    <!-- STAGE -->
+    <main class="stage">
+      <div class="card">
+        <div class="plotwrap"><canvas id="plot" width="720" height="360"></canvas></div>
+        <div class="legend">
+          <span><i class="swatch" style="background:var(--curve)"></i><span data-lang-th>การแจกแจงภายใต้ H₀</span><span data-lang-en>Distribution under H₀</span></span>
+          <span><i class="swatch" style="background:var(--reject)"></i><span data-lang-th>พื้นที่ = p-value</span><span data-lang-en>Area = p-value</span></span>
+          <span><i class="swatch" style="background:#111;opacity:.55"></i><span data-lang-th>ค่าที่สังเกตได้</span><span data-lang-en>Observed statistic</span></span>
+        </div>
+      </div>
+
+      <div class="results">
+        <div class="stat"><div class="k">p-value</div><div class="v" id="pOut">–</div></div>
+        <div class="stat"><div class="k"><span data-lang-th>ค่าวิกฤต</span><span data-lang-en>Critical value</span></div><div class="v" id="critOut">–</div></div>
+        <div class="stat"><div class="k">α</div><div class="v" id="aOut">–</div></div>
+      </div>
+
+      <div class="decision" id="decision"></div>
+
+      <div class="card story" id="story"></div>
+
+      <div class="card">
+        <div class="misconception">
+          <b data-lang-th>ระวังเข้าใจผิด:</b><b data-lang-en>Common misconception:</b>
+          <span id="misText"></span>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2 data-lang-th>คำถามชวนคิด</h2><h2 data-lang-en>Questions to think about</h2>
+        <ul class="qs">
+          <li data-lang-th>ถ้าเพิ่มขนาดตัวอย่าง n ขึ้นเรื่อย ๆ โดยค่า statistic เท่าเดิม p จะเปลี่ยนไหม แล้วแปลว่าผล "สำคัญขึ้น" จริงหรือ?</li>
+          <li data-lang-en>If you keep raising n while the statistic stays fixed, does p change — and does that really mean the effect is "more important"?</li>
+          <li data-lang-th>p = 0.03 หมายความว่า "มีโอกาส 3% ที่ H₀ จะเป็นจริง" ใช่หรือไม่? (คำตอบ: ไม่ใช่)</li>
+          <li data-lang-en>Does p = 0.03 mean "there is a 3% chance H₀ is true"? (Answer: no.)</li>
+          <li data-lang-th>ทำไม F-test ถึงดูแค่หางขวา ในขณะที่ z-test ดูได้ทั้งสองหาง?</li>
+          <li data-lang-en>Why does the F-test look only at the right tail, while a z-test can look at both?</li>
+        </ul>
+      </div>
+    </main>
+  </div>
+
+  <footer>
+    <span data-lang-th>สื่อการสอนสถิติแบบโต้ตอบ · สร้างเพื่อการศึกษา</span>
+    <span data-lang-en>Interactive statistics teaching tool · built for education</span>
+  </footer>
+</div>
+
+<script>
+/* ---------- distribution math ---------- */
+function lgamma(x){
+  const c=[76.18009172947146,-86.50532032941677,24.01409824083091,
+           -1.231739572450155,0.1208650973866179e-2,-0.5395239384953e-5];
+  let y=x, tmp=x+5.5; tmp-=(x+0.5)*Math.log(tmp);
+  let ser=1.000000000190015;
+  for(let j=0;j<6;j++){y++;ser+=c[j]/y;}
+  return -tmp+Math.log(2.5066282746310005*ser/x);
+}
+function betacf(x,a,b){
+  const EPS=3e-12,FPMIN=1e-300,MAXIT=250;
+  let qab=a+b,qap=a+1,qam=a-1,c=1,d=1-qab*x/qap;
+  if(Math.abs(d)<FPMIN)d=FPMIN; d=1/d; let h=d;
+  for(let m=1;m<=MAXIT;m++){
+    let m2=2*m;
+    let aa=m*(b-m)*x/((qam+m2)*(a+m2));
+    d=1+aa*d; if(Math.abs(d)<FPMIN)d=FPMIN;
+    c=1+aa/c; if(Math.abs(c)<FPMIN)c=FPMIN; d=1/d; h*=d*c;
+    aa=-(a+m)*(qab+m)*x/((a+m2)*(qap+m2));
+    d=1+aa*d; if(Math.abs(d)<FPMIN)d=FPMIN;
+    c=1+aa/c; if(Math.abs(c)<FPMIN)c=FPMIN; d=1/d;
+    let del=d*c; h*=del; if(Math.abs(del-1)<EPS)break;
+  }
+  return h;
+}
+function ibeta(x,a,b){
+  if(x<=0)return 0; if(x>=1)return 1;
+  const bt=Math.exp(lgamma(a+b)-lgamma(a)-lgamma(b)+a*Math.log(x)+b*Math.log(1-x));
+  if(x<(a+1)/(a+b+2))return bt*betacf(x,a,b)/a;
+  return 1-bt*betacf(1-x,b,a)/b;
+}
+function erf(x){
+  const t=1/(1+0.3275911*Math.abs(x));
+  const y=1-(((((1.061405429*t-1.453152027)*t)+1.421413741)*t-0.284496736)*t+0.254829592)*t*Math.exp(-x*x);
+  return x>=0?y:-y;
+}
+const SQRT2=Math.SQRT2, SQRT2PI=Math.sqrt(2*Math.PI);
+function normCdf(z){return 0.5*(1+erf(z/SQRT2));}
+function normPdf(z){return Math.exp(-z*z/2)/SQRT2PI;}
+function tCdf(t,df){const x=df/(df+t*t),ib=0.5*ibeta(x,df/2,0.5);return t>0?1-ib:ib;}
+function tPdf(t,df){
+  return Math.exp(lgamma((df+1)/2)-lgamma(df/2))/Math.sqrt(df*Math.PI)*Math.pow(1+t*t/df,-(df+1)/2);
+}
+function fCdf(f,d1,d2){if(f<=0)return 0;const x=d1*f/(d1*f+d2);return ibeta(x,d1/2,d2/2);}
+function fPdf(f,d1,d2){
+  if(f<=0)return 0;
+  const lb=lgamma(d1/2)+lgamma(d2/2)-lgamma((d1+d2)/2);
+  return Math.exp(0.5*d1*Math.log(d1*f)+0.5*d2*Math.log(d2)-0.5*(d1+d2)*Math.log(d1*f+d2)-Math.log(f)-lb);
+}
+/* inverse via bisection on cdf */
+function invCdf(cdf,target,lo,hi){
+  for(let i=0;i<80;i++){const m=(lo+hi)/2;if(cdf(m)<target)lo=m;else hi=m;}
+  return (lo+hi)/2;
+}
+
+/* ---------- state ---------- */
+const S={lang:'th',test:'z',tail:'two',ctx:'coin',stat:2.2,n:15,n2:15,alpha:0.05};
+
+/* ---------- UI wiring ---------- */
+function setLang(l){S.lang=l;document.body.classList.toggle('en',l==='en');
+  document.getElementById('btnTH').classList.toggle('active',l==='th');
+  document.getElementById('btnEN').classList.toggle('active',l==='en');
+  document.documentElement.lang=l; render();}
+function setTest(t){
+  S.test=t;
+  document.querySelectorAll('#segTest button').forEach(b=>b.classList.toggle('active',b.dataset.test===t));
+  const isF=t==='f';
+  document.getElementById('df2Field').style.display=isF?'block':'none';
+  document.getElementById('contextField').style.display=isF?'none':'block';
+  document.getElementById('tailNote').style.display=isF?'block':'none';
+  document.querySelectorAll('#segTail button').forEach(b=>b.disabled=isF);
+  if(isF){S.tail='right';document.querySelectorAll('#segTail button').forEach(b=>b.classList.toggle('active',b.dataset.tail==='right'));}
+  configureStatSlider();
+  render();
+}
+function setTail(t){S.tail=t;document.querySelectorAll('#segTail button').forEach(b=>b.classList.toggle('active',b.dataset.tail===t));render();}
+function setCtx(c){S.ctx=c;document.querySelectorAll('#segCtx button').forEach(b=>b.classList.toggle('active',b.dataset.ctx===c));render();}
+
+function configureStatSlider(){
+  const s=document.getElementById('statSlider');
+  if(S.test==='f'){s.min=1;s.max=800;s.value=Math.round(S.stat*100);}   /* F: 0.01–8 */
+  else{s.min=-450;s.max=450;s.value=Math.round(S.stat*100);}            /* z/t: -4.5–4.5 */
+}
+document.getElementById('statSlider').addEventListener('input',e=>{S.stat=(+e.target.value)/100;render();});
+document.getElementById('nSlider').addEventListener('input',e=>{S.n=+e.target.value;render();});
+document.getElementById('n2Slider').addEventListener('input',e=>{S.n2=+e.target.value;render();});
+document.getElementById('aSlider').addEventListener('input',e=>{S.alpha=(+e.target.value)/100;render();});
+
+/* ---------- compute ---------- */
+function compute(){
+  const {test,tail}=S;
+  let pdf,cdf,df1,df2,crit,p,xmin,xmax;
+  if(test==='z'){pdf=normPdf;cdf=normCdf;xmin=-4.5;xmax=4.5;}
+  else if(test==='t'){df1=S.n-1;pdf=x=>tPdf(x,df1);cdf=x=>tCdf(x,df1);xmin=-4.5;xmax=4.5;}
+  else{df1=S.n-1;df2=S.n2-1;pdf=x=>fPdf(x,df1,df2);cdf=x=>fCdf(x,df1,df2);xmin=0;xmax=Math.max(6,S.stat*1.4);}
+  const st=S.stat, a=S.alpha;
+  if(test==='f'){p=1-cdf(st);crit=invCdf(cdf,1-a,0,200);}
+  else if(tail==='right'){p=1-cdf(st);crit=invCdf(cdf,1-a,-50,50);}
+  else if(tail==='left'){p=cdf(st);crit=invCdf(cdf,a,-50,50);}
+  else{p=2*(1-cdf(Math.abs(st)));crit=invCdf(cdf,1-a/2,-50,50);}
+  return {pdf,cdf,df1,df2,crit,p,xmin,xmax,st,a,tail:test==='f'?'right':tail};
+}
+
+/* ---------- draw ---------- */
+function draw(C){
+  const cv=document.getElementById('plot'),ctx=cv.getContext('2d');
+  const W=cv.width,H=cv.height,padL=44,padR=20,padT=18,padB=34;
+  const plotW=W-padL-padR,plotH=H-padT-padB;
+  ctx.clearRect(0,0,W,H);
+  const {pdf,xmin,xmax,st,crit,tail}=C;
+  const N=260;
+  let ymax=0;const pts=[];
+  for(let i=0;i<=N;i++){const x=xmin+(xmax-xmin)*i/N;const y=pdf(x);pts.push([x,y]);if(y>ymax)ymax=y;}
+  ymax*=1.12;
+  const X=x=>padL+(x-xmin)/(xmax-xmin)*plotW;
+  const Y=y=>padT+plotH-(y/ymax)*plotH;
+  /* axis */
+  ctx.strokeStyle="#cbd0d9";ctx.lineWidth=1;
+  ctx.beginPath();ctx.moveTo(padL,padT+plotH);ctx.lineTo(padL+plotW,padT+plotH);ctx.stroke();
+  ctx.fillStyle="#9aa1ad";ctx.font="12px system-ui";ctx.textAlign="center";
+  const ticks= xmin<0? [-4,-2,0,2,4] : [0,1,2,3,4,5,6].filter(t=>t<=xmax);
+  ticks.forEach(t=>{if(t<xmin||t>xmax)return;const px=X(t);
+    ctx.strokeStyle="#eef0f4";ctx.beginPath();ctx.moveTo(px,padT);ctx.lineTo(px,padT+plotH);ctx.stroke();
+    ctx.fillText(t,px,padT+plotH+18);});
+  /* shaded rejection/p region */
+  function shade(fromX,toX,color){
+    ctx.fillStyle=color;ctx.beginPath();ctx.moveTo(X(fromX),padT+plotH);
+    for(let i=0;i<=N;i++){const x=xmin+(xmax-xmin)*i/N;if(x<fromX||x>toX)continue;ctx.lineTo(X(x),Y(pdf(x)));}
+    ctx.lineTo(X(Math.min(toX,xmax)),padT+plotH);ctx.closePath();ctx.fill();
+  }
+  const rf=getComputedStyle(document.documentElement).getPropertyValue('--reject-fill');
+  if(tail==='right')shade(st,xmax,rf);
+  else if(tail==='left')shade(xmin,st,rf);
+  else{shade(Math.abs(st),xmax,rf);shade(xmin,-Math.abs(st),rf);}
+  /* curve fill + line */
+  ctx.fillStyle=getComputedStyle(document.documentElement).getPropertyValue('--curve-fill');
+  ctx.beginPath();ctx.moveTo(X(xmin),padT+plotH);
+  pts.forEach(([x,y])=>ctx.lineTo(X(x),Y(y)));ctx.lineTo(X(xmax),padT+plotH);ctx.fill();
+  ctx.strokeStyle=getComputedStyle(document.documentElement).getPropertyValue('--curve');
+  ctx.lineWidth=2.4;ctx.beginPath();pts.forEach(([x,y],i)=>{const px=X(x),py=Y(y);i?ctx.lineTo(px,py):ctx.moveTo(px,py);});ctx.stroke();
+  /* critical line(s) */
+  ctx.setLineDash([5,5]);ctx.strokeStyle="#b91c1c";ctx.lineWidth=1.3;
+  const drawV=(x,label)=>{if(x<xmin||x>xmax)return;const px=X(x);
+    ctx.beginPath();ctx.moveTo(px,padT+4);ctx.lineTo(px,padT+plotH);ctx.stroke();};
+  if(tail==='two'){drawV(crit);drawV(-crit);}else drawV(crit);
+  ctx.setLineDash([]);
+  /* observed statistic line */
+  if(st>=xmin&&st<=xmax){const px=X(st);
+    ctx.strokeStyle="rgba(17,17,17,.7)";ctx.lineWidth=2;
+    ctx.beginPath();ctx.moveTo(px,padT);ctx.lineTo(px,padT+plotH);ctx.stroke();
+    ctx.fillStyle="rgba(17,17,17,.85)";ctx.beginPath();ctx.moveTo(px,padT);ctx.lineTo(px-5,padT-0);ctx.lineTo(px+5,padT-0);
+    ctx.fillRect(px-3,padT-2,6,6);}
+}
+
+/* ---------- text ---------- */
+const T={
+  statLabel:{z:{th:"ค่า z ที่สังเกตได้",en:"Observed z"},t:{th:"ค่า t ที่สังเกตได้",en:"Observed t"},f:{th:"ค่า F ที่สังเกตได้",en:"Observed F"}},
+  testHint:{
+    z:{th:"z-test: ทดสอบค่าเฉลี่ยเมื่อทราบความแปรปรวนของประชากร รูประฆังคว่ำมาตรฐาน",en:"z-test: mean test with known variance — the standard bell curve."},
+    t:{th:"t-test: ใช้เมื่อ n เล็กและประมาณความแปรปรวนจากตัวอย่าง หางอ้วนกว่าปกติ",en:"t-test: small n, variance estimated from data — fatter tails than normal."},
+    f:{th:"F-test: อัตราส่วนความแปรปรวน (เช่น ANOVA) เบ้ขวาและไม่มีค่าติดลบ",en:"F-test: ratio of variances (e.g. ANOVA) — right-skewed, no negatives."}
+  }
+};
+function fmtP(p){if(p<0.0001)return p.toExponential(2);return p.toFixed(4);}
+
+function render(){
+  configureStatSliderSync();
+  const C=compute();
+  const L=S.lang;
+  /* labels */
+  document.getElementById('statLabel').textContent=T.statLabel[S.test][L];
+  document.getElementById('statVal').textContent=S.stat.toFixed(2);
+  document.getElementById('testHint').textContent=T.testHint[S.test][L];
+  document.getElementById('nVal').textContent=S.n;
+  document.getElementById('n2Val').textContent=S.n2;
+  document.getElementById('aVal').textContent=S.alpha.toFixed(2);
+  /* df hints */
+  const dfHint=document.getElementById('dfHint');
+  if(S.test==='z')dfHint.textContent=L==='th'?"z ไม่ขึ้นกับ n (ใช้เพื่อบริบทเรื่องเล่าเท่านั้น)":"z does not depend on n (used only for the story).";
+  else if(S.test==='t')dfHint.textContent=L==='th'?("df = n − 1 = "+(S.n-1)+"  · n ใหญ่ขึ้น t เข้าใกล้ปกติ"):("df = n − 1 = "+(S.n-1)+"  · larger n → t approaches normal");
+  else dfHint.textContent=L==='th'?("df₁ = "+(S.n-1)):("df₁ = "+(S.n-1));
+  /* results */
+  document.getElementById('pOut').textContent=fmtP(C.p);
+  document.getElementById('pOut').style.color=C.p<C.a?"var(--reject)":"var(--ok)";
+  document.getElementById('critOut').textContent=(S.test==='f'||C.tail!=='two')?C.crit.toFixed(3):("±"+C.crit.toFixed(3));
+  document.getElementById('aOut').textContent=C.a.toFixed(2);
+  /* decision */
+  const dec=document.getElementById('decision');const reject=C.p<C.a;
+  dec.className="decision "+(reject?"reject":"fail");
+  dec.textContent = reject
+    ? (L==='th'?"p < α → ปฏิเสธ H₀ (ผลมีนัยสำคัญทางสถิติ)":"p < α → reject H₀ (statistically significant)")
+    : (L==='th'?"p ≥ α → ไม่ปฏิเสธ H₀ (ยังไม่มีหลักฐานพอ)":"p ≥ α → fail to reject H₀ (insufficient evidence)");
+  /* story */
+  document.getElementById('story').innerHTML=story(C,L);
+  /* misconception */
+  document.getElementById('misText').textContent = mis(C,L);
+  draw(C);
+}
+function configureStatSliderSync(){
+  const s=document.getElementById('statSlider');
+  const want = S.test==='f' ? {min:1,max:800} : {min:-450,max:450};
+  if(+s.min!==want.min||+s.max!==want.max){s.min=want.min;s.max=want.max;}
+  s.value=Math.round(S.stat*100);
+}
+
+function story(C,L){
+  const p=fmtP(C.p);
+  if(S.test==='f'){
+    return L==='th'
+      ? `<b>สถานการณ์:</b> เปรียบเทียบความแปรปรวน/ค่าเฉลี่ยของหลายกลุ่ม (เช่น ANOVA) โดย H₀ คือ "ทุกกลุ่มไม่ต่างกัน"<br><b>อ่านค่า:</b> ถ้า H₀ จริง โอกาสที่ F จะสูงถึง ${C.st.toFixed(2)} หรือมากกว่า มีเพียง <b>${p}</b> นั่นคือ p-value`
+      : `<b>Scenario:</b> comparing variance/means across groups (e.g. ANOVA); H₀ = "all groups are the same."<br><b>Reading it:</b> if H₀ were true, the chance of an F as large as ${C.st.toFixed(2)} or larger is only <b>${p}</b> — that is the p-value.`;
+  }
+  const dir = C.tail==='two'?(L==='th'?"สุดโต่งเท่านี้ในทั้งสองทิศ":"this extreme in either direction")
+            : C.tail==='right'?(L==='th'?"สูงเท่านี้หรือมากกว่า":"this high or higher")
+            : (L==='th'?"ต่ำเท่านี้หรือน้อยกว่า":"this low or lower");
+  if(S.ctx==='coin'){
+    return L==='th'
+      ? `<b>สถานการณ์:</b> เหรียญนี้ยุติธรรมไหม? H₀ คือ "เหรียญยุติธรรม (หัว 50%)"<br><b>อ่านค่า:</b> สมมติว่าเหรียญยุติธรรมจริง โอกาสที่จะได้ผล ${dir} เท่าที่สังเกต (statistic = ${C.st.toFixed(2)}) คือ <b>${p}</b>`
+      : `<b>Scenario:</b> is this coin fair? H₀ = "the coin is fair (50% heads)."<br><b>Reading it:</b> assuming the coin really is fair, the chance of a result ${dir} than observed (statistic = ${C.st.toFixed(2)}) is <b>${p}</b>.`;
+  }
+  return L==='th'
+    ? `<b>สถานการณ์:</b> ยา/วิธีใหม่ได้ผลต่างจากเดิมไหม? H₀ คือ "ไม่มีผลต่าง (ค่าเฉลี่ยเท่ากัน)"<br><b>อ่านค่า:</b> สมมติว่ายาไม่มีผลจริง โอกาสที่จะเห็นความต่าง ${dir} เท่าที่วัดได้ (statistic = ${C.st.toFixed(2)}) คือ <b>${p}</b>`
+    : `<b>Scenario:</b> does the new drug/method differ from control? H₀ = "no difference (equal means)."<br><b>Reading it:</b> assuming the drug truly has no effect, the chance of a difference ${dir} than measured (statistic = ${C.st.toFixed(2)}) is <b>${p}</b>.`;
+}
+function mis(C,L){
+  return L==='th'
+    ? `p-value ไม่ใช่ "ความน่าจะเป็นที่ H₀ เป็นจริง" และไม่ใช่ขนาดของผล — มันคือความน่าจะเป็นของ "ข้อมูลที่สุดโต่งเท่านี้หรือกว่านี้ ภายใต้สมมติว่า H₀ จริง" เท่านั้น`
+    : `A p-value is not "the probability that H₀ is true," nor a measure of effect size — it is only the probability of "data this extreme or more, assuming H₀ is true."`;
+}
+
+/* init */
+setTest('z');
+render();
+window.addEventListener('resize',()=>{const cv=document.getElementById('plot');cv.width=cv.clientWidth*2;cv.height=cv.clientWidth*2*0.5;render();});
+window.dispatchEvent(new Event('resize'));
+</script>
+</body>
+</html>
