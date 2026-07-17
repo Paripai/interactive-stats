@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Distribution Explorer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;600;700;800&family=IBM+Plex+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: "Noto Sans Thai","IBM Plex Sans",sans-serif; font-size: 18px; font-weight: 600; background: #f5f5f5; color: #1a1a1a; min-height: 100vh; }
+
+.header { background: #fff; border-bottom: 3px solid #1a1a1a; padding: 16px 32px; display: flex; align-items: center; justify-content: space-between; }
+.header-left { display: flex; align-items: baseline; gap: 14px; }
+.header h1 { font-size: 28px; font-weight: 800; }
+.header span { font-size: 20px; font-weight: 600; color: #555; }
+
+.home-btn { text-decoration: none; color: #6c757d; font-size: 15px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border: 1px solid #dee2e6; border-radius: 6px; background: #fff; transition: all 0.2s; flex-shrink: 0; }
+.home-btn:hover { background: #f8f9fa; color: #0d6efd; }
+
+.lang-toggle { display: flex; border: 2px solid #1a1a1a; border-radius: 8px; overflow: hidden; }
+.lang-btn { font-family: inherit; font-size: 16px; font-weight: 700; padding: 6px 16px; border: none; cursor: pointer; background: #fff; color: #888; transition: all .12s; }
+.lang-btn.active { background: #1a1a1a; color: #fff; }
+
+.main { max-width: 1000px; margin: 24px auto; padding: 0 24px; }
+.card { background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 20px; margin-bottom: 16px; }
+.card-title { font-size: 20px; font-weight: 800; margin-bottom: 14px; border-bottom: 1px solid #eee; padding-bottom: 8px; }
+
+.layout { display: grid; grid-template-columns: 320px 1fr; gap: 20px; }
+@media (max-width: 850px) { .layout { grid-template-columns: 1fr; } }
+
+/* Distribution select */
+.dist-select { width: 100%; font-family: inherit; font-size: 17px; font-weight: 700; padding: 10px 12px; border: 2px solid #1a1a1a; border-radius: 8px; background: #fff; color: #1a1a1a; cursor: pointer; margin-bottom: 6px; }
+.dist-type { font-size: 14px; font-weight: 600; color: #666; margin-bottom: 4px; }
+
+/* Controls */
+.slider-group { margin-bottom: 18px; }
+.slider-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px; }
+.slider-name { font-size: 17px; font-weight: 600; }
+.slider-val { font-size: 24px; font-weight: 800; min-width: 48px; text-align: right; color: #0d6efd; }
+input[type=range] { width: 100%; accent-color: #0d6efd; cursor: pointer; }
+
+/* Stats & Legends */
+.stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 16px; }
+.stat { background: #f8f9fa; border: 1px solid #e0e0e0; border-radius: 6px; padding: 12px; text-align: center; }
+.stat-val { font-size: 22px; font-weight: 800; }
+.stat-lbl { font-size: 14px; font-weight: 600; color: #555; margin-top: 2px; }
+
+.legend { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 12px; justify-content: center; }
+.legend-item { display: flex; align-items: center; gap: 6px; font-size: 15px; font-weight: 600; color: #555; }
+
+.insight { font-size: 16px; font-weight: 600; color: #333; background: #f8f9fa; border-left: 4px solid #0d6efd; padding: 12px 16px; border-radius: 0 6px 6px 0; margin-top: 16px; line-height: 1.5; }
+
+.questions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.q-chip { font-size: 16px; font-weight: 600; padding: 6px 14px; border: 1px solid #bbb; border-radius: 20px; color: #444; background: #fafafa; }
+
+canvas { width: 100%; display: block; border-radius: 4px; background: #fff; }
+
+/* Formula panel */
+.formula-box { margin-top: 16px; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden; }
+.formula-box .fhead { background: #1a1a1a; color: #fff; font-size: 15px; font-weight: 800; padding: 8px 14px; }
+.formula-row { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-top: 1px solid #eee; font-size: 18px; font-weight: 700; flex-wrap: wrap; }
+.formula-row .flabel { min-width: 130px; color: #555; font-size: 14px; font-weight: 700; }
+.formula-row .fexpr { font-family: "IBM Plex Sans", sans-serif; }
+.formula-cond { font-size: 13px; font-weight: 600; color: #888; padding: 8px 14px 10px; line-height: 1.45; border-top: 1px solid #eee; background: #fafafa; }
+.frac { display: inline-flex; flex-direction: column; text-align: center; vertical-align: middle; margin: 0 3px; line-height: 1.05; }
+.frac .num { border-bottom: 1.6px solid currentColor; padding: 0 5px; }
+.frac .den { padding: 0 5px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-left">
+    <a href="index.html" class="home-btn" data-th="← หน้าแรก" data-en="← Home">← Home</a>
+    <h1 data-th="สำรวจการแจกแจง" data-en="Distribution Explorer">Distribution Explorer</h1>
+  </div>
+  <div class="lang-toggle">
+    <button class="lang-btn active" onclick="setLang('th')">TH</button>
+    <button class="lang-btn" onclick="setLang('en')">EN</button>
+  </div>
+</div>
+
+<div class="main">
+  <div class="layout">
+
+    <div>
+      <div class="card">
+        <div class="card-title" data-th="เลือกการแจกแจง" data-en="Choose Distribution">เลือกการแจกแจง</div>
+        <select id="distSelect" class="dist-select" onchange="onDistChange()"></select>
+        <div class="dist-type" id="distType"></div>
+
+        <hr style="border: 0; border-top: 1px solid #eee; margin: 14px 0;">
+
+        <div class="card-title" style="font-size:17px;" data-th="พารามิเตอร์" data-en="Parameters">พารามิเตอร์</div>
+        <div id="paramArea"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title" data-th="คำถามชวนคิด" data-en="Discussion Questions">คำถามชวนคิด</div>
+        <div class="questions">
+          <div class="q-chip" data-th="พารามิเตอร์ตัวไหนเลื่อนโค้ง ตัวไหนบีบ/ยืดโค้ง?" data-en="Which parameter shifts vs. scales the curve?">พารามิเตอร์ตัวไหนเลื่อนโค้ง ตัวไหนบีบ/ยืดโค้ง?</div>
+          <div class="q-chip" data-th="ทำไม mean = variance ใน Poisson?" data-en="Why does mean = variance for Poisson?">ทำไม mean = variance ใน Poisson?</div>
+          <div class="q-chip" data-th="Chi-square, Exponential เป็นกรณีพิเศษของ Gamma อย่างไร?" data-en="How are Chi-square & Exponential special cases of Gamma?">Chi-square, Exponential เป็นกรณีพิเศษของ Gamma อย่างไร?</div>
+          <div class="q-chip" data-th="ค่าเบ้ (skewness) เปลี่ยนไปทางไหนเมื่อปรับพารามิเตอร์?" data-en="How does skewness change with the parameters?">ค่าเบ้ (skewness) เปลี่ยนไปทางไหนเมื่อปรับพารามิเตอร์?</div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="card">
+        <div class="card-title" id="graphTitle" data-th="กราฟการแจกแจง" data-en="Distribution Graph">กราฟการแจกแจง</div>
+
+        <canvas id="cvs"></canvas>
+
+        <div class="legend">
+          <div class="legend-item"><div id="legSwatch" style="width:24px; height:12px; background:#0d6efd;"></div><span id="legLabel"></span></div>
+        </div>
+
+        <div class="stat-grid">
+          <div class="stat"><div class="stat-val" id="sMean">–</div><div class="stat-lbl" data-th="ค่าเฉลี่ย (μ)" data-en="Mean (μ)">ค่าเฉลี่ย (μ)</div></div>
+          <div class="stat"><div class="stat-val" id="sSd" style="color:#0d6efd;">–</div><div class="stat-lbl" data-th="ส่วนเบี่ยงเบน (σ)" data-en="Std Dev (σ)">ส่วนเบี่ยงเบน (σ)</div></div>
+          <div class="stat"><div class="stat-val" id="sVar">–</div><div class="stat-lbl" data-th="ความแปรปรวน (σ²)" data-en="Variance (σ²)">ความแปรปรวน (σ²)</div></div>
+          <div class="stat"><div class="stat-val" id="sSkew" style="color:#dc3545;">–</div><div class="stat-lbl" data-th="ค่าความเบ้" data-en="Skewness">ค่าความเบ้</div></div>
+        </div>
+
+        <div class="insight" id="insight"></div>
+        <div class="formula-box" id="formulaBox"></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+/* ============ Language ============ */
+var currentLang = 'th';
+function t(th, en){ return currentLang === 'en' ? en : th; }
+function setLang(lang){
+  currentLang = lang;
+  document.querySelectorAll('.lang-btn').forEach(function(b){ b.classList.toggle('active', b.textContent.trim().toLowerCase() === lang); });
+  document.querySelectorAll('[data-th]').forEach(function(el){
+    var v = el.getAttribute('data-' + lang);
+    if (v !== null) el.innerHTML = v;
+  });
+  buildParamUI();   // rebuild param labels in new language
+  render();
+}
+
+/* ============ Math helpers ============ */
+function gammaln(x){
+  var cof = [76.18009172947146,-86.50532032941677,24.01409824083091,
+             -1.231739572450155,0.1208650973866179e-2,-0.5395239384953e-5];
+  var ser = 1.000000000190015, xx = x, y = x, tmp = x + 5.5;
+  tmp -= (x + 0.5) * Math.log(tmp);
+  for (var j = 0; j < 6; j++) ser += cof[j] / ++y;
+  return Math.log(2.5066282746310005 * ser / xx) - tmp;
+}
+function betaln(a,b){ return gammaln(a) + gammaln(b) - gammaln(a+b); }
+function lnChoose(n,k){ return gammaln(n+1) - gammaln(k+1) - gammaln(n-k+1); }
+var SQRT2PI = Math.sqrt(2*Math.PI);
+function frac(n,d){ return '<span class="frac"><span class="num">'+n+'</span><span class="den">'+d+'</span></span>'; }
+
+/* ============ Distribution registry ============
+   Each entry: type, name{th,en}, params[], f(x,p), range(p),
+   moments(p) -> {mean, varr, skew} (null=undefined, Infinity allowed),
+   note(p) -> {th,en}
+================================================= */
+var DIST = {
+
+  /* ---------- Discrete ---------- */
+  bernoulli: {
+    type:'discrete', name:{th:'แบร์นูลลี (Bernoulli)', en:'Bernoulli'},
+    params:[{key:'p', name:{th:'ความน่าจะเป็น p', en:'Probability p'}, min:0.01, max:0.99, step:0.01, def:0.5, dec:2}],
+    f:function(k,p){ if(k===0) return 1-p.p; if(k===1) return p.p; return 0; },
+    range:function(p){ return {kmin:0, kmax:1}; },
+    moments:function(p){ var q=1-p.p; return {mean:p.p, varr:p.p*q, skew:(1-2*p.p)/Math.sqrt(p.p*q)}; },
+    note:function(p){ return {
+      th:'การทดลองครั้งเดียวที่ได้ 0 หรือ 1 เท่านั้น เป็นอิฐก้อนแรกของ Binomial (Binomial = ผลรวมของ Bernoulli n ครั้ง)',
+      en:'A single 0/1 trial — the building block of the Binomial (Binomial = sum of n Bernoulli trials).'}; }
+  },
+
+  binomial: {
+    type:'discrete', name:{th:'ทวินาม (Binomial)', en:'Binomial'},
+    params:[
+      {key:'n', name:{th:'จำนวนครั้ง n', en:'Trials n'}, min:1, max:60, step:1, def:20, dec:0},
+      {key:'p', name:{th:'ความน่าจะเป็น p', en:'Probability p'}, min:0.01, max:0.99, step:0.01, def:0.5, dec:2}
+    ],
+    f:function(k,p){ if(k<0||k>p.n) return 0; return Math.exp(lnChoose(p.n,k)+k*Math.log(p.p)+(p.n-k)*Math.log(1-p.p)); },
+    range:function(p){ return {kmin:0, kmax:p.n}; },
+    moments:function(p){ var q=1-p.p; return {mean:p.n*p.p, varr:p.n*p.p*q, skew:(1-2*p.p)/Math.sqrt(p.n*p.p*q)}; },
+    note:function(p){ return {
+      th:'นับจำนวน "สำเร็จ" จาก n ครั้ง เมื่อ n ใหญ่และ p กลาง โค้งจะเข้าใกล้ Normal; เมื่อ p เล็กมากและ n ใหญ่ จะเข้าใกล้ Poisson (λ=np)',
+      en:'Counts successes in n trials. Large n with moderate p → approaches Normal; small p with large n → approaches Poisson (λ=np).'}; }
+  },
+
+  poisson: {
+    type:'discrete', name:{th:'ปัวซง (Poisson)', en:'Poisson'},
+    params:[{key:'lam', name:{th:'อัตราเฉลี่ย λ', en:'Rate λ'}, min:0.1, max:30, step:0.1, def:4, dec:1}],
+    f:function(k,p){ if(k<0) return 0; return Math.exp(-p.lam + k*Math.log(p.lam) - gammaln(k+1)); },
+    range:function(p){ return {kmin:0, kmax:Math.max(10, Math.ceil(p.lam + 4*Math.sqrt(p.lam)))}; },
+    moments:function(p){ return {mean:p.lam, varr:p.lam, skew:1/Math.sqrt(p.lam)}; },
+    note:function(p){ return {
+      th:'นับเหตุการณ์ที่เกิดในช่วงคงที่ จุดเด่นคือ mean = variance = λ เสมอ เมื่อ λ ใหญ่ขึ้นโค้งเบ้น้อยลงและเข้าใกล้ Normal',
+      en:'Counts events in a fixed interval. Its signature: mean = variance = λ. As λ grows it becomes less skewed and approaches Normal.'}; }
+  },
+
+  geometric: {
+    type:'discrete', name:{th:'เรขาคณิต (Geometric)', en:'Geometric'},
+    params:[{key:'p', name:{th:'ความน่าจะเป็น p', en:'Probability p'}, min:0.02, max:0.9, step:0.01, def:0.3, dec:2}],
+    f:function(k,p){ if(k<1) return 0; return Math.pow(1-p.p, k-1)*p.p; },
+    range:function(p){ return {kmin:1, kmax:Math.min(60, Math.max(6, Math.ceil(Math.log(0.002)/Math.log(1-p.p))))}; },
+    moments:function(p){ var q=1-p.p; return {mean:1/p.p, varr:q/(p.p*p.p), skew:(2-p.p)/Math.sqrt(q)}; },
+    note:function(p){ return {
+      th:'จำนวนครั้งที่ต้องลองจนกว่าจะสำเร็จครั้งแรก (k = 1,2,…) เบ้ขวาเสมอ และมีคุณสมบัติ "ไร้ความจำ" (memoryless)',
+      en:'Number of trials until the first success (k = 1,2,…). Always right-skewed and "memoryless".'}; }
+  },
+
+  negbinom: {
+    type:'discrete', name:{th:'ทวินามเชิงลบ (Neg. Binomial)', en:'Negative Binomial'},
+    params:[
+      {key:'r', name:{th:'จำนวนสำเร็จ r', en:'Successes r'}, min:1, max:20, step:1, def:4, dec:0},
+      {key:'p', name:{th:'ความน่าจะเป็น p', en:'Probability p'}, min:0.05, max:0.95, step:0.01, def:0.4, dec:2}
+    ],
+    f:function(k,p){ if(k<0) return 0; return Math.exp(lnChoose(k+p.r-1,k)+p.r*Math.log(p.p)+k*Math.log(1-p.p)); },
+    range:function(p){ var m=p.r*(1-p.p)/p.p, sd=Math.sqrt(p.r*(1-p.p))/p.p; return {kmin:0, kmax:Math.min(90, Math.max(8, Math.ceil(m+4*sd)))}; },
+    moments:function(p){ var q=1-p.p; return {mean:p.r*q/p.p, varr:p.r*q/(p.p*p.p), skew:(2-p.p)/Math.sqrt(p.r*q)}; },
+    note:function(p){ return {
+      th:'จำนวน "ครั้งที่ล้มเหลว" ก่อนจะสำเร็จครบ r ครั้ง เป็นการรวม Geometric r ตัว (r=1 คือ Geometric พอดี)',
+      en:'Number of failures before the r-th success — a sum of r Geometrics (r=1 gives the Geometric).'}; }
+  },
+
+  /* ---------- Continuous ---------- */
+  uniform: {
+    type:'continuous', name:{th:'สม่ำเสมอ (Uniform)', en:'Uniform'},
+    params:[
+      {key:'a', name:{th:'ขอบล่าง a', en:'Lower a'}, min:-5, max:5, step:0.1, def:0, dec:1},
+      {key:'b', name:{th:'ขอบบน b', en:'Upper b'}, min:-5, max:10, step:0.1, def:4, dec:1}
+    ],
+    f:function(x,p){ var lo=Math.min(p.a,p.b), hi=Math.max(p.a,p.b); if(hi-lo<1e-9) return 0; return (x>=lo&&x<=hi)?1/(hi-lo):0; },
+    range:function(p){ var lo=Math.min(p.a,p.b), hi=Math.max(p.a,p.b), s=(hi-lo)||1; return {xmin:lo-0.2*s, xmax:hi+0.2*s}; },
+    moments:function(p){ var lo=Math.min(p.a,p.b), hi=Math.max(p.a,p.b), w=hi-lo; return {mean:(lo+hi)/2, varr:w*w/12, skew:0}; },
+    note:function(p){ return {
+      th:'ทุกค่าในช่วง [a,b] มีโอกาสเท่ากันหมด ไม่มีค่าเบ้ (skew = 0) เป็นฐานของการสุ่มตัวเลข (random number)',
+      en:'Every value in [a,b] is equally likely (skew = 0). The basis of random number generation.'}; }
+  },
+
+  normal: {
+    type:'continuous', name:{th:'ปกติ (Normal)', en:'Normal'},
+    params:[
+      {key:'mu', name:{th:'ค่าเฉลี่ย μ', en:'Mean μ'}, min:-5, max:5, step:0.1, def:0, dec:1},
+      {key:'sig', name:{th:'ส่วนเบี่ยงเบน σ', en:'Std Dev σ'}, min:0.3, max:3, step:0.1, def:1, dec:1}
+    ],
+    f:function(x,p){ var z=(x-p.mu)/p.sig; return Math.exp(-0.5*z*z)/(p.sig*SQRT2PI); },
+    range:function(p){ return {xmin:p.mu-4*p.sig, xmax:p.mu+4*p.sig}; },
+    moments:function(p){ return {mean:p.mu, varr:p.sig*p.sig, skew:0}; },
+    note:function(p){ return {
+      th:'μ เลื่อนโค้งซ้าย–ขวา ส่วน σ บีบ/ยืดความกว้าง สมมาตรเสมอ เป็นจุดหมายปลายทางของทฤษฎีลิมิตกลาง (CLT)',
+      en:'μ shifts the curve left/right; σ scales its width. Always symmetric — the limit of the Central Limit Theorem.'}; }
+  },
+
+  exponential: {
+    type:'continuous', name:{th:'เอกซ์โพเนนเชียล (Exponential)', en:'Exponential'},
+    params:[{key:'lam', name:{th:'อัตรา λ', en:'Rate λ'}, min:0.1, max:3, step:0.05, def:1, dec:2}],
+    f:function(x,p){ if(x<0) return 0; return p.lam*Math.exp(-p.lam*x); },
+    range:function(p){ return {xmin:0, xmax:Math.max(4, -Math.log(0.002)/p.lam)}; },
+    moments:function(p){ return {mean:1/p.lam, varr:1/(p.lam*p.lam), skew:2}; },
+    note:function(p){ return {
+      th:'เวลาที่รอจนเหตุการณ์ Poisson เกิดครั้งถัดไป เบ้ขวาคงที่ (skew = 2) และ "ไร้ความจำ" คือกรณีพิเศษของ Gamma ที่ shape = 1',
+      en:'Waiting time until the next Poisson event. Constant right skew (skew = 2), memoryless — a Gamma with shape = 1.'}; }
+  },
+
+  gamma: {
+    type:'continuous', name:{th:'แกมมา (Gamma)', en:'Gamma'},
+    params:[
+      {key:'k', name:{th:'รูปร่าง k (shape)', en:'Shape k'}, min:0.5, max:12, step:0.1, def:2, dec:1},
+      {key:'th', name:{th:'มาตราส่วน θ (scale)', en:'Scale θ'}, min:0.2, max:4, step:0.1, def:1, dec:1}
+    ],
+    f:function(x,p){ if(x<=0) return 0; return Math.exp((p.k-1)*Math.log(x) - x/p.th - gammaln(p.k) - p.k*Math.log(p.th)); },
+    range:function(p){ var m=p.k*p.th, sd=Math.sqrt(p.k)*p.th; return {xmin:0, xmax:Math.max(4, m+4*sd)}; },
+    moments:function(p){ return {mean:p.k*p.th, varr:p.k*p.th*p.th, skew:2/Math.sqrt(p.k)}; },
+    note:function(p){ return {
+      th:'k คุมรูปร่าง (k=1 ได้ Exponential, k ใหญ่เข้าใกล้ Normal) ส่วน θ คุมมาตราส่วน ครอบคลุม Exponential และ Chi-square เป็นกรณีพิเศษ',
+      en:'k sets the shape (k=1 → Exponential; large k → Normal); θ sets the scale. It generalizes both Exponential and Chi-square.'}; }
+  },
+
+  beta: {
+    type:'continuous', name:{th:'เบตา (Beta)', en:'Beta'},
+    params:[
+      {key:'a', name:{th:'α (alpha)', en:'α (alpha)'}, min:0.3, max:8, step:0.1, def:2, dec:1},
+      {key:'b', name:{th:'β (beta)', en:'β (beta)'}, min:0.3, max:8, step:0.1, def:2, dec:1}
+    ],
+    f:function(x,p){ if(x<=0||x>=1) return 0; return Math.exp((p.a-1)*Math.log(x)+(p.b-1)*Math.log(1-x)-betaln(p.a,p.b)); },
+    range:function(p){ return {xmin:0, xmax:1}; },
+    moments:function(p){ var s=p.a+p.b; return {mean:p.a/s, varr:(p.a*p.b)/(s*s*(s+1)), skew:2*(p.b-p.a)*Math.sqrt(s+1)/((s+2)*Math.sqrt(p.a*p.b))}; },
+    note:function(p){ return {
+      th:'อยู่บนช่วง [0,1] จึงเหมาะกับ "การแจกแจงของสัดส่วน/ความน่าจะเป็น" α=β ได้โค้งสมมาตร; α<β เบ้ขวา เป็น prior ยอดนิยมในเบย์เซียน',
+      en:'Lives on [0,1], perfect for modeling proportions/probabilities. α=β is symmetric; α<β skews right — a popular Bayesian prior.'}; }
+  },
+
+  chisq: {
+    type:'continuous', name:{th:'ไคสแควร์ (Chi-square)', en:'Chi-square'},
+    params:[{key:'df', name:{th:'ชั้นความอิสระ k', en:'Deg. of Freedom k'}, min:1, max:20, step:1, def:4, dec:0}],
+    f:function(x,p){ if(x<=0) return 0; var k=p.df/2; return Math.exp((k-1)*Math.log(x) - x/2 - gammaln(k) - k*Math.LN2); },
+    range:function(p){ return {xmin:0, xmax:Math.max(6, p.df + 4*Math.sqrt(2*p.df))}; },
+    moments:function(p){ return {mean:p.df, varr:2*p.df, skew:Math.sqrt(8/p.df)}; },
+    note:function(p){ return {
+      th:'ผลรวมของ Normal มาตรฐานยกกำลังสอง k ตัว คือ Gamma ที่ shape=k/2, scale=2 พอดี ใช้ในการทดสอบความกลมกลืน (goodness-of-fit)',
+      en:'Sum of k squared standard Normals — exactly a Gamma with shape=k/2, scale=2. Used in goodness-of-fit tests.'}; }
+  },
+
+  studentt: {
+    type:'continuous', name:{th:'ที (Student\u2019s t)', en:'Student\u2019s t'},
+    params:[{key:'df', name:{th:'ชั้นความอิสระ ν', en:'Deg. of Freedom ν'}, min:1, max:40, step:1, def:5, dec:0}],
+    f:function(x,p){ var v=p.df; var logC=gammaln((v+1)/2)-gammaln(v/2)-0.5*Math.log(v*Math.PI); return Math.exp(logC)*Math.pow(1+x*x/v, -(v+1)/2); },
+    range:function(p){ return {xmin:-5, xmax:5}; },
+    moments:function(p){ var v=p.df;
+      var mean = v>1 ? 0 : null;
+      var varr = v>2 ? v/(v-2) : (v>1 ? Infinity : null);
+      var skew = v>3 ? 0 : null;
+      return {mean:mean, varr:varr, skew:skew};
+    },
+    note:function(p){ return {
+      th:'คล้าย Normal แต่ "หางอ้วน" กว่าเมื่อ ν น้อย (ชดเชยความไม่แน่นอนของกลุ่มตัวอย่างเล็ก) เมื่อ ν → ∞ จะทับ Normal พอดี',
+      en:'Like Normal but with "fatter tails" when ν is small (accounting for small-sample uncertainty). As ν → ∞ it matches Normal.'}; }
+  },
+
+  fdist: {
+    type:'continuous', name:{th:'เอฟ (F-distribution)', en:'F-distribution'},
+    params:[
+      {key:'d1', name:{th:'df ตัวเศษ d₁', en:'Num. df d₁'}, min:1, max:20, step:1, def:5, dec:0},
+      {key:'d2', name:{th:'df ตัวส่วน d₂', en:'Den. df d₂'}, min:1, max:30, step:1, def:10, dec:0}
+    ],
+    f:function(x,p){ if(x<=0) return 0; var d1=p.d1, d2=p.d2;
+      var ln = (d1/2)*Math.log(d1/d2) + (d1/2-1)*Math.log(x) - ((d1+d2)/2)*Math.log(1+(d1/d2)*x) - betaln(d1/2,d2/2);
+      return Math.exp(ln);
+    },
+    range:function(p){ return {xmin:0, xmax:5}; },
+    moments:function(p){ var d1=p.d1, d2=p.d2;
+      var mean = d2>2 ? d2/(d2-2) : Infinity;
+      var varr = d2>4 ? (2*d2*d2*(d1+d2-2))/(d1*(d2-2)*(d2-2)*(d2-4)) : Infinity;
+      var skew = d2>6 ? ((2*d1+d2-2)*Math.sqrt(8*(d2-4)))/((d2-6)*Math.sqrt(d1*(d1+d2-2))) : Infinity;
+      return {mean:mean, varr:varr, skew:skew};
+    },
+    note:function(p){ return {
+      th:'อัตราส่วนของความแปรปรวนสองกลุ่ม (จริงๆ คือ Chi-square สองตัวหารกันแล้วปรับ df) เป็นหัวใจของการทดสอบ ANOVA',
+      en:'A ratio of two variances (two Chi-squares divided and df-adjusted) — the heart of the ANOVA test.'}; }
+  },
+
+  lognormal: {
+    type:'continuous', name:{th:'ล็อกนอร์มัล (Log-normal)', en:'Log-normal'},
+    params:[
+      {key:'mu', name:{th:'μ (ของ ln x)', en:'μ (of ln x)'}, min:-1, max:1.5, step:0.05, def:0, dec:2},
+      {key:'sig', name:{th:'σ (ของ ln x)', en:'σ (of ln x)'}, min:0.1, max:1.2, step:0.05, def:0.5, dec:2}
+    ],
+    f:function(x,p){ if(x<=0) return 0; var z=(Math.log(x)-p.mu)/p.sig; return Math.exp(-0.5*z*z)/(x*p.sig*SQRT2PI); },
+    range:function(p){ return {xmin:0, xmax:Math.exp(p.mu+3*p.sig)}; },
+    moments:function(p){ var s2=p.sig*p.sig;
+      var mean=Math.exp(p.mu+s2/2);
+      var varr=(Math.exp(s2)-1)*Math.exp(2*p.mu+s2);
+      var skew=(Math.exp(s2)+2)*Math.sqrt(Math.exp(s2)-1);
+      return {mean:mean, varr:varr, skew:skew};
+    },
+    note:function(p){ return {
+      th:'ถ้า ln(x) แจกแจงปกติ แล้ว x จะเป็น Log-normal เบ้ขวาเสมอ เหมาะกับข้อมูลที่เป็นบวกและกระจายกว้าง เช่น รายได้ ราคาหุ้น',
+      en:'If ln(x) is Normal, then x is Log-normal — always right-skewed. Fits positive, wide-spread data like incomes and stock prices.'}; }
+  }
+};
+
+/* Symbolic mean/variance formulas (language-neutral) + optional conditions */
+var FORMULAS = {
+  bernoulli:{ sym:{mean:'p', varr:'p(1−p)'} },
+  binomial:{ sym:{mean:'np', varr:'np(1−p)'} },
+  poisson:{ sym:{mean:'λ', varr:'λ'}, cond:{th:'จุดเด่น: mean = variance = λ', en:'Signature: mean = variance = λ.'} },
+  geometric:{ sym:{mean:frac('1','p'), varr:frac('1−p','p²')} },
+  negbinom:{ sym:{mean:frac('r(1−p)','p'), varr:frac('r(1−p)','p²')} },
+  uniform:{ sym:{mean:frac('a+b','2'), varr:frac('(b−a)²','12')} },
+  normal:{ sym:{mean:'μ', varr:'σ²'}, cond:{th:'พารามิเตอร์ μ และ σ คือค่าเฉลี่ยและส่วนเบี่ยงเบนโดยตรง', en:'The parameters μ and σ are the mean and std dev directly.'} },
+  exponential:{ sym:{mean:frac('1','λ'), varr:frac('1','λ²')} },
+  gamma:{ sym:{mean:'kθ', varr:'kθ²'} },
+  beta:{ sym:{mean:frac('α','α+β'), varr:frac('αβ','(α+β)²(α+β+1)')} },
+  chisq:{ sym:{mean:'k', varr:'2k'} },
+  studentt:{ sym:{mean:'0', varr:frac('ν','ν−2')}, cond:{th:'ค่าเฉลี่ยนิยามเมื่อ ν > 1 · ความแปรปรวนเมื่อ ν > 2 (นอกนั้นไม่นิยาม)', en:'Mean defined for ν > 1; variance for ν > 2 (otherwise undefined).'} },
+  fdist:{ sym:{mean:frac('d₂','d₂−2'), varr:frac('2d₂²(d₁+d₂−2)','d₁(d₂−2)²(d₂−4)')}, cond:{th:'ค่าเฉลี่ยเมื่อ d₂ > 2 · ความแปรปรวนเมื่อ d₂ > 4', en:'Mean for d₂ > 2; variance for d₂ > 4.'} },
+  lognormal:{ sym:{mean:'e<sup>μ+σ²/2</sup>', varr:'(e<sup>σ²</sup>−1)·e<sup>2μ+σ²</sup>'} }
+};
+Object.keys(FORMULAS).forEach(function(k){ DIST[k].sym = FORMULAS[k].sym; DIST[k].cond = FORMULAS[k].cond; });
+
+var ORDER_DISCRETE = ['bernoulli','binomial','poisson','geometric','negbinom'];
+var ORDER_CONTINUOUS = ['uniform','normal','exponential','gamma','beta','chisq','studentt','fdist','lognormal'];
+
+/* ============ State ============ */
+var currentKey = 'normal';
+var params = {};  // live values for current distribution
+
+/* Build the <select> with optgroups */
+function buildSelect(){
+  var sel = document.getElementById('distSelect');
+  sel.innerHTML = '';
+  var g1 = document.createElement('optgroup'); g1.label = t('การแจกแจงไม่ต่อเนื่อง (Discrete)','Discrete Distributions');
+  ORDER_DISCRETE.forEach(function(k){ var o=document.createElement('option'); o.value=k; o.textContent=DIST[k].name[currentLang]; g1.appendChild(o); });
+  var g2 = document.createElement('optgroup'); g2.label = t('การแจกแจงต่อเนื่อง (Continuous)','Continuous Distributions');
+  ORDER_CONTINUOUS.forEach(function(k){ var o=document.createElement('option'); o.value=k; o.textContent=DIST[k].name[currentLang]; g2.appendChild(o); });
+  sel.appendChild(g1); sel.appendChild(g2);
+  sel.value = currentKey;
+}
+
+/* Build parameter sliders for the current distribution */
+function buildParamUI(){
+  buildSelect();
+  var d = DIST[currentKey];
+  document.getElementById('distType').textContent =
+    d.type === 'discrete' ? t('ชนิด: ไม่ต่อเนื่อง — แสดงด้วยแท่ง (PMF)','Type: Discrete — shown as bars (PMF)')
+                          : t('ชนิด: ต่อเนื่อง — แสดงด้วยเส้นโค้ง (PDF)','Type: Continuous — shown as a curve (PDF)');
+  var area = document.getElementById('paramArea');
+  area.innerHTML = '';
+  d.params.forEach(function(pr){
+    if (params[pr.key] === undefined) params[pr.key] = pr.def;
+    var g = document.createElement('div'); g.className = 'slider-group';
+    var head = document.createElement('div'); head.className = 'slider-header';
+    var nm = document.createElement('span'); nm.className='slider-name'; nm.textContent = pr.name[currentLang];
+    var val = document.createElement('span'); val.className='slider-val'; val.id = 'val_'+pr.key;
+    val.textContent = Number(params[pr.key]).toFixed(pr.dec);
+    head.appendChild(nm); head.appendChild(val);
+    var inp = document.createElement('input');
+    inp.type='range'; inp.min=pr.min; inp.max=pr.max; inp.step=pr.step; inp.value=params[pr.key];
+    inp.id = 'slider_'+pr.key;
+    inp.addEventListener('input', function(){
+      params[pr.key] = parseFloat(this.value);
+      document.getElementById('val_'+pr.key).textContent = Number(params[pr.key]).toFixed(pr.dec);
+      render();
+    });
+    g.appendChild(head); g.appendChild(inp);
+    area.appendChild(g);
+  });
+  // legend
+  document.getElementById('legLabel').textContent = d.name[currentLang] + (d.type==='discrete' ? ' — PMF' : ' — PDF');
+  document.getElementById('graphTitle').textContent = d.name[currentLang];
+}
+
+function onDistChange(){
+  currentKey = document.getElementById('distSelect').value;
+  params = {}; // reset to this distribution's defaults
+  buildParamUI();
+  render();
+}
+
+/* ============ Canvas ============ */
+var canvas = document.getElementById('cvs');
+var ctx = canvas.getContext('2d');
+
+function resizeCanvas(){
+  var W = canvas.parentElement.clientWidth - 40;
+  var H = 320;
+  canvas.style.width = W + 'px';
+  canvas.style.height = H + 'px';
+  canvas.width = W * window.devicePixelRatio;
+  canvas.height = H * window.devicePixelRatio;
+  ctx.setTransform(1,0,0,1,0,0);
+  ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+  render();
+}
+window.addEventListener('resize', resizeCanvas);
+
+function percentileMax(values){
+  var v = values.filter(function(x){ return isFinite(x); }).slice().sort(function(a,b){ return a-b; });
+  if (!v.length) return 1;
+  var idx = Math.min(v.length-1, Math.floor(v.length*0.985));
+  var pm = v[idx];
+  return pm > 0 ? pm : (v[v.length-1] || 1);
+}
+
+function render(){
+  var d = DIST[currentKey];
+  var W = canvas.offsetWidth, H = canvas.offsetHeight;
+  ctx.clearRect(0,0,W,H);
+  var pad = {top:20, bottom:34, left:24, right:20};
+  var cw = W - pad.left - pad.right;
+  var ch = H - pad.top - pad.bottom;
+
+  var BLUE = '#0d6efd';
+
+  if (d.type === 'discrete'){
+    var r = d.range(params);
+    var kmin = r.kmin, kmax = r.kmax;
+    var ys = [];
+    for (var k=kmin;k<=kmax;k++) ys.push(d.f(k,params));
+    var ymax = Math.max.apply(null, ys) * 1.15 || 1;
+
+    var n = kmax - kmin + 1;
+    var slot = cw / n;
+    var bw = Math.max(2, slot * 0.7);
+
+    var toY = function(v){ return pad.top + ch - (v/ymax)*ch; };
+
+    // axis
+    ctx.strokeStyle = '#888'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(pad.left, toY(0)); ctx.lineTo(W-pad.right, toY(0)); ctx.stroke();
+
+    // bars
+    for (var i=0;i<n;i++){
+      var kk = kmin + i;
+      var val = d.f(kk, params);
+      var cx = pad.left + slot*(i+0.5);
+      var barH = toY(0) - toY(val);
+      ctx.fillStyle = 'rgba(13,110,253,0.75)';
+      ctx.fillRect(cx - bw/2, toY(val), bw, barH);
+      ctx.strokeStyle = BLUE; ctx.lineWidth = 1;
+      ctx.strokeRect(cx - bw/2, toY(val), bw, barH);
+    }
+
+    // x labels (up to ~12 ticks)
+    ctx.fillStyle = '#555'; ctx.font = '13px "IBM Plex Sans", sans-serif'; ctx.textAlign='center';
+    var stepLbl = Math.max(1, Math.ceil(n/12));
+    for (var j=0;j<n;j+=stepLbl){
+      var kv = kmin + j;
+      var px = pad.left + slot*(j+0.5);
+      ctx.fillText(kv, px, toY(0)+18);
+    }
+
+  } else {
+    var rc = d.range(params);
+    var xmin = rc.xmin, xmax = rc.xmax;
+    var N = 320;
+    var xs = [], yy = [];
+    for (var s=0;s<=N;s++){
+      var x = xmin + (s/N)*(xmax-xmin);
+      xs.push(x); yy.push(d.f(x, params));
+    }
+    var ymaxC = percentileMax(yy) * 1.15 || 1;
+
+    var toXc = function(v){ return pad.left + ((v-xmin)/(xmax-xmin))*cw; };
+    var toYc = function(v){ return pad.top + ch - Math.min(v, ymaxC)/ymaxC*ch; };
+
+    // grid
+    ctx.strokeStyle = '#eee'; ctx.lineWidth = 1; ctx.beginPath();
+    for (var gy=1; gy<=4; gy++){ var yv = ymaxC*gy/5; ctx.moveTo(pad.left, toYc(yv)); ctx.lineTo(W-pad.right, toYc(yv)); }
+    ctx.stroke();
+
+    // axis
+    ctx.strokeStyle = '#888'; ctx.lineWidth = 1; ctx.beginPath();
+    ctx.moveTo(pad.left, toYc(0)); ctx.lineTo(W-pad.right, toYc(0)); ctx.stroke();
+
+    // fill area
+    ctx.beginPath();
+    ctx.moveTo(toXc(xs[0]), toYc(0));
+    for (var a=0;a<=N;a++) ctx.lineTo(toXc(xs[a]), toYc(yy[a]));
+    ctx.lineTo(toXc(xs[N]), toYc(0));
+    ctx.closePath();
+    ctx.fillStyle = 'rgba(13,110,253,0.15)';
+    ctx.fill();
+
+    // curve
+    ctx.beginPath();
+    for (var c=0;c<=N;c++){ var px=toXc(xs[c]), py=toYc(yy[c]); c===0?ctx.moveTo(px,py):ctx.lineTo(px,py); }
+    ctx.strokeStyle = BLUE; ctx.lineWidth = 3; ctx.stroke();
+
+    // x labels
+    ctx.fillStyle = '#555'; ctx.font = '13px "IBM Plex Sans", sans-serif'; ctx.textAlign='center';
+    var ticks = 6;
+    for (var tk=0; tk<=ticks; tk++){
+      var xv = xmin + (tk/ticks)*(xmax-xmin);
+      var pxx = toXc(xv);
+      var lbl = Math.abs(xv) >= 100 ? xv.toFixed(0) : xv.toFixed(1);
+      ctx.fillText(lbl, pxx, toYc(0)+18);
+      ctx.beginPath(); ctx.moveTo(pxx, toYc(0)); ctx.lineTo(pxx, toYc(0)+5); ctx.strokeStyle='#999'; ctx.stroke();
+    }
+  }
+
+  updateStats();
+}
+
+function fmt(v){
+  if (v === null || v === undefined) return '–';
+  if (!isFinite(v)) return '∞';
+  if (Math.abs(v) >= 1000) return v.toFixed(0);
+  if (Math.abs(v) >= 100) return v.toFixed(1);
+  return v.toFixed(2);
+}
+
+function updateStats(){
+  var d = DIST[currentKey];
+  var m = d.moments(params);
+  var sd = (m.varr === null || m.varr === undefined) ? null : (!isFinite(m.varr) ? Infinity : Math.sqrt(m.varr));
+  document.getElementById('sMean').textContent = fmt(m.mean);
+  document.getElementById('sSd').textContent   = fmt(sd);
+  document.getElementById('sVar').textContent  = fmt(m.varr);
+  document.getElementById('sSkew').textContent = fmt(m.skew);
+  document.getElementById('insight').innerHTML = d.note(params)[currentLang];
+  renderFormula(d);
+}
+
+function fRow(label, sym, res){
+  return '<div class="formula-row"><span class="flabel">'+label+'</span>'
+       + '<span class="fexpr">= '+sym+' = <b>'+res+'</b></span></div>';
+}
+function renderFormula(d){
+  var box = document.getElementById('formulaBox');
+  if (!box || !d.sym) return;
+  var m = d.moments(params);
+  var sd = (m.varr === null || m.varr === undefined) ? null
+         : (!isFinite(m.varr) ? Infinity : Math.sqrt(m.varr));
+  var html = '<div class="fhead">' + t('สูตรของการแจกแจงนี้','Formulas for this distribution') + '</div>';
+  html += fRow(t('ค่าเฉลี่ย μ','Mean μ'), d.sym.mean, fmt(m.mean));
+  html += fRow(t('ความแปรปรวน σ²','Variance σ²'), d.sym.varr, fmt(m.varr));
+  html += fRow(t('ส่วนเบี่ยงเบน σ','Std dev σ'), '√σ²', fmt(sd));
+  if (d.cond) html += '<div class="formula-cond">' + d.cond[currentLang] + '</div>';
+  box.innerHTML = html;
+}
+
+/* Init */
+buildParamUI();
+setTimeout(resizeCanvas, 50);
+setLang('th');
+</script>
+</body>
+</html>

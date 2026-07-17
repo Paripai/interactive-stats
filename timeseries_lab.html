@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Time Series Forecasting Lab</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;600;700;800&family=IBM+Plex+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: "Noto Sans Thai","IBM Plex Sans",sans-serif; font-size: 18px; font-weight: 600; background: #f5f5f5; color: #1a1a1a; min-height: 100vh; }
+
+.header { background: #fff; border-bottom: 3px solid #1a1a1a; padding: 16px 32px; display: flex; align-items: center; justify-content: space-between; }
+.header-left { display: flex; align-items: baseline; gap: 14px; }
+.header h1 { font-size: 26px; font-weight: 800; }
+
+.home-btn { text-decoration: none; color: #6c757d; font-size: 15px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border: 1px solid #dee2e6; border-radius: 6px; background: #fff; transition: all 0.2s; flex-shrink: 0; }
+.home-btn:hover { background: #f8f9fa; color: #0d6efd; }
+
+.lang-toggle { display: flex; border: 2px solid #1a1a1a; border-radius: 8px; overflow: hidden; }
+.lang-btn { font-family: inherit; font-size: 16px; font-weight: 700; padding: 6px 16px; border: none; cursor: pointer; background: #fff; color: #888; transition: all .12s; }
+.lang-btn.active { background: #1a1a1a; color: #fff; }
+
+.main { max-width: 1040px; margin: 24px auto; padding: 0 24px; }
+.card { background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 20px; margin-bottom: 16px; }
+.card-title { font-size: 20px; font-weight: 800; margin-bottom: 14px; border-bottom: 1px solid #eee; padding-bottom: 8px; }
+
+.layout { display: grid; grid-template-columns: 330px 1fr; gap: 20px; }
+@media (max-width: 880px) { .layout { grid-template-columns: 1fr; } }
+
+.sel { width: 100%; font-family: inherit; font-size: 17px; font-weight: 700; padding: 10px 12px; border: 2px solid #1a1a1a; border-radius: 8px; background: #fff; color: #1a1a1a; cursor: pointer; margin-bottom: 8px; }
+
+.seg { display: flex; border: 2px solid #1a1a1a; border-radius: 8px; overflow: hidden; margin-bottom: 10px; }
+.seg button { flex: 1; font-family: inherit; font-size: 15px; font-weight: 700; padding: 8px 4px; border: none; border-right: 2px solid #1a1a1a; cursor: pointer; background: #fff; color: #888; transition: all .12s; }
+.seg button:last-child { border-right: none; }
+.seg button.active { background: #1a1a1a; color: #fff; }
+
+.btn { display: inline-block; width: 100%; text-align: center; background: #0d6efd; color: #fff; border: none; font-family: inherit; font-size: 15px; font-weight: 700; padding: 10px 14px; border-radius: 8px; cursor: pointer; transition: background .2s; }
+.btn:hover { background: #0b5ed7; }
+
+.slider-group { margin-bottom: 16px; }
+.slider-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px; }
+.slider-name { font-size: 16px; font-weight: 700; }
+.slider-val { font-size: 22px; font-weight: 800; min-width: 44px; text-align: right; color: #0d6efd; }
+input[type=range] { width: 100%; accent-color: #0d6efd; cursor: pointer; }
+input[type=range].sig { accent-color: #7c3aed; }
+
+canvas { width: 100%; display: block; border-radius: 4px; background: #fff; }
+
+.legend { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 12px; justify-content: center; }
+.legend-item { display: flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 600; color: #555; }
+
+.chips { display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap; }
+.chip { font-size: 15px; font-weight: 700; padding: 6px 12px; border-radius: 8px; border: 2px solid; display: flex; align-items: center; gap: 6px; }
+.chip.on { border-color: #20c997; background: #e8f7f1; color: #0f7a5a; }
+.chip.off { border-color: #dcdcdc; background: #f7f7f7; color: #aaa; }
+
+.stat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 14px; }
+.stat { background: #f8f9fa; border: 1px solid #e0e0e0; border-radius: 6px; padding: 12px; text-align: center; }
+.stat-val { font-size: 22px; font-weight: 800; }
+.stat-lbl { font-size: 13px; font-weight: 600; color: #555; margin-top: 2px; }
+
+.formula-box { margin-top: 16px; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden; }
+.formula-box .fhead { background: #1a1a1a; color: #fff; font-size: 15px; font-weight: 800; padding: 8px 14px; }
+.formula-row { padding: 9px 14px; border-top: 1px solid #eee; font-size: 17px; font-weight: 700; font-family: "IBM Plex Sans", sans-serif; line-height: 1.5; }
+.frac { display: inline-flex; flex-direction: column; text-align: center; vertical-align: middle; margin: 0 3px; line-height: 1.05; }
+.frac .num { border-bottom: 1.6px solid currentColor; padding: 0 5px; }
+.frac .den { padding: 0 5px; }
+
+.insight { font-size: 16px; font-weight: 600; color: #333; background: #f8f9fa; border-left: 4px solid #0d6efd; padding: 12px 16px; border-radius: 0 6px 6px 0; margin-top: 16px; line-height: 1.55; }
+.insight.warn { border-left-color: #f0932b; background: #fff8f0; }
+
+.questions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.q-chip { font-size: 15px; font-weight: 600; padding: 6px 14px; border: 1px solid #bbb; border-radius: 20px; color: #444; background: #fafafa; line-height: 1.4; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-left">
+    <a href="index.html" class="home-btn" data-th="← หน้าแรก" data-en="← Home">← Home</a>
+    <h1 data-th="ห้องทดลองพยากรณ์อนุกรมเวลา" data-en="Time Series Forecasting Lab">Time Series Forecasting Lab</h1>
+  </div>
+  <div class="lang-toggle">
+    <button class="lang-btn active" onclick="setLang('th')">TH</button>
+    <button class="lang-btn" onclick="setLang('en')">EN</button>
+  </div>
+</div>
+
+<div class="main">
+  <div class="layout">
+
+    <div>
+      <div class="card">
+        <div class="card-title" data-th="1 · สร้างอนุกรมเวลา" data-en="1 · Build the series">1 · สร้างอนุกรมเวลา</div>
+
+        <div class="slider-group">
+          <div class="slider-header"><span class="slider-name" data-th="ความชันแนวโน้ม" data-en="Trend slope">ความชันแนวโน้ม</span><span class="slider-val" id="vSlope" style="color:#7c3aed;">0.60</span></div>
+          <input type="range" class="sig" id="slope" min="-1" max="2" step="0.05" value="0.6" oninput="onSignal()">
+        </div>
+        <div class="slider-group">
+          <div class="slider-header"><span class="slider-name" data-th="ความแรงฤดูกาล" data-en="Seasonal strength">ความแรงฤดูกาล</span><span class="slider-val" id="vAmp" style="color:#7c3aed;">10</span></div>
+          <input type="range" class="sig" id="amp" min="0" max="20" step="0.5" value="10" oninput="onSignal()">
+        </div>
+        <div class="slider-group">
+          <div class="slider-header"><span class="slider-name" data-th="คาบฤดูกาล (m)" data-en="Season period (m)">คาบฤดูกาล (m)</span><span class="slider-val" id="vPer" style="color:#7c3aed;">12</span></div>
+          <input type="range" class="sig" id="per" min="2" max="24" step="1" value="12" oninput="onSignal()">
+        </div>
+        <div class="slider-group">
+          <div class="slider-header"><span class="slider-name" data-th="สัญญาณรบกวน (σ)" data-en="Noise (σ)">สัญญาณรบกวน (σ)</span><span class="slider-val" id="vNoise" style="color:#7c3aed;">3.0</span></div>
+          <input type="range" class="sig" id="noise" min="0" max="8" step="0.5" value="3" oninput="onSignal()">
+        </div>
+
+        <div class="slider-name" style="margin-bottom:6px;" data-th="ชนิดการรวมองค์ประกอบ" data-en="Component combination">ชนิดการรวมองค์ประกอบ</div>
+        <div class="seg" id="segMode">
+          <button data-mode="add" class="active" onclick="setMode('add')" data-th="บวก (Additive)" data-en="Additive">บวก (Additive)</button>
+          <button data-mode="mul" onclick="setMode('mul')" data-th="คูณ (Multiplicative)" data-en="Multiplicative">คูณ (Multiplicative)</button>
+        </div>
+
+        <button class="btn" onclick="newSample()" data-th="🎲 สุ่มตัวอย่างใหม่" data-en="🎲 New random sample">🎲 สุ่มตัวอย่างใหม่</button>
+      </div>
+
+      <div class="card">
+        <div class="card-title" data-th="2 · เลือกโมเดลพยากรณ์" data-en="2 · Choose a forecast model">2 · เลือกโมเดลพยากรณ์</div>
+        <select id="modelSel" class="sel" onchange="onModelChange()"></select>
+        <div id="modelParams"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title" data-th="คำถามชวนคิด" data-en="Discussion Questions">คำถามชวนคิด</div>
+        <div class="questions">
+          <div class="q-chip" data-th="สร้างเส้นที่มีฤดูกาลแรงๆ แล้วลองใช้ SES — ทำไมเส้นทำนายถึงแบน?" data-en="Build a strongly seasonal series, then use SES — why is the forecast flat?">สร้างเส้นที่มีฤดูกาลแรงๆ แล้วลองใช้ SES — ทำไมเส้นทำนายถึงแบน?</div>
+          <div class="q-chip" data-th="RMSE ต่ำสุดที่โมเดลดีๆ ทำได้ ควรใกล้ค่าอะไร?" data-en="What value is the lowest achievable RMSE close to?">RMSE ต่ำสุดที่โมเดลดีๆ ทำได้ ควรใกล้ค่าอะไร?</div>
+          <div class="q-chip" data-th="α มากหรือน้อย ทำให้โมเดล 'จำอดีต' นานแค่ไหน?" data-en="Does a larger or smaller α make the model remember the past longer?">α มากหรือน้อย ทำให้โมเดล 'จำอดีต' นานแค่ไหน?</div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="card">
+        <div class="card-title" id="graphTitle" data-th="กราฟ: ข้อมูล · เส้น fit · พยากรณ์" data-en="Graph: data · fit · forecast">กราฟ: ข้อมูล · เส้น fit · พยากรณ์</div>
+
+        <canvas id="cvs"></canvas>
+
+        <div class="legend">
+          <div class="legend-item"><div style="width:16px;height:10px;background:#1a1a1a;border-radius:2px;"></div><span data-th="ข้อมูลจริง (อดีต)" data-en="Actual (history)">ข้อมูลจริง (อดีต)</span></div>
+          <div class="legend-item"><div style="width:20px;height:0;border-top:3px solid #0d6efd;"></div><span data-th="เส้น fit" data-en="Fitted">เส้น fit</span></div>
+          <div class="legend-item"><div style="width:20px;height:0;border-top:3px dashed #0d6efd;"></div><span data-th="พยากรณ์" data-en="Forecast">พยากรณ์</span></div>
+          <div class="legend-item"><div style="width:20px;height:0;border-top:2px dotted #999;"></div><span data-th="ค่าจริงในอนาคต" data-en="True future">ค่าจริงในอนาคต</span></div>
+        </div>
+
+        <div class="chips" id="captureChips"></div>
+
+        <div class="stat-grid">
+          <div class="stat"><div class="stat-val" id="sMae" style="color:#dc3545;">–</div><div class="stat-lbl">Test MAE</div></div>
+          <div class="stat"><div class="stat-val" id="sRmse" style="color:#dc3545;">–</div><div class="stat-lbl">Test RMSE</div></div>
+          <div class="stat" style="background:#f3effc; border-color:#7c3aed;"><div class="stat-val" id="sSigma" style="color:#7c3aed;">–</div><div class="stat-lbl" data-th="σ จริง (ขีดจำกัดล่าง)" data-en="True σ (lower bound)">σ จริง (ขีดจำกัดล่าง)</div></div>
+        </div>
+
+        <div class="formula-box" id="formulaBox"></div>
+        <div class="insight" id="insight"></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+/* ============ Language ============ */
+var currentLang = 'th';
+function t(th, en){ return currentLang === 'en' ? en : th; }
+function setLang(lang){
+  currentLang = lang;
+  document.querySelectorAll('.lang-btn').forEach(function(b){ b.classList.toggle('active', b.textContent.trim().toLowerCase() === lang); });
+  document.querySelectorAll('[data-th]').forEach(function(el){
+    var v = el.getAttribute('data-' + lang); if (v !== null) el.innerHTML = v;
+  });
+  buildModelSelect();
+  buildModelParams();
+  render();
+}
+
+/* ============ Small helpers ============ */
+function frac(n,d){ return '<span class="frac"><span class="num">'+n+'</span><span class="den">'+d+'</span></span>'; }
+function mean(a){ var s=0; for(var i=0;i<a.length;i++) s+=a[i]; return s/a.length; }
+function fmt(x){ if(x===null||x===undefined||!isFinite(x)) return '–'; if(Math.abs(x)>=100) return x.toFixed(1); return x.toFixed(2); }
+
+/* Seeded RNG (mulberry32) + standard normal via Box–Muller */
+function mulberry32(a){ return function(){ a|=0; a=a+0x6D2B79F5|0; var tt=Math.imul(a^a>>>15,1|a); tt=tt+Math.imul(tt^tt>>>7,61|tt)^tt; return ((tt^tt>>>14)>>>0)/4294967296; }; }
+function normals(n, seed){
+  var r=mulberry32(seed), out=[];
+  for(var i=0;i<n;i++){ var u1=Math.max(1e-9,r()), u2=r(); out.push(Math.sqrt(-2*Math.log(u1))*Math.cos(2*Math.PI*u2)); }
+  return out;
+}
+
+/* ============ State ============ */
+var N_HIST = 48, H = 16;               // history length, forecast horizon
+var SIG = { slope:0.6, amp:10, per:12, noise:3, mode:'add', seed:12345 };
+var currentModel = 'holtwinters';
+var MP = { alpha:0.3, beta:0.1, gamma:0.2, window:4 };  // model params
+var Yfull = [];   // length N_HIST + H (true series, last H is holdout truth)
+
+function buildSeries(){
+  var L = N_HIST + H, level0 = 50;
+  var z = normals(L, SIG.seed);
+  Yfull = [];
+  for (var t2=0; t2<L; t2++){
+    var trendPart = level0 + SIG.slope*t2;
+    var seasonRaw = Math.sin(2*Math.PI*t2/SIG.per);
+    var v;
+    if (SIG.mode === 'add'){
+      v = trendPart + SIG.amp*seasonRaw + SIG.noise*z[t2];
+    } else {
+      v = trendPart * (1 + (SIG.amp/25)*seasonRaw) + SIG.noise*z[t2];
+    }
+    Yfull.push(v);
+  }
+}
+
+/* ============ Forecast models ============
+   fit(y, m) -> { fitted:[len n, null allowed], fc:[len H] }
+=================================================== */
+var MODELS = {
+  naive: {
+    name:{th:'Naïve (ค่าล่าสุด)', en:'Naïve (last value)'},
+    cap:{level:true, trend:false, season:false}, params:[],
+    fit:function(y){ var n=y.length, fit=new Array(n).fill(null);
+      for(var i=1;i<n;i++) fit[i]=y[i-1];
+      var fc=[]; for(var k=0;k<H;k++) fc.push(y[n-1]); return {fitted:fit, fc:fc}; },
+    formula:['ŷ<sub>t+h</sub> = y<sub>t</sub>'],
+    shape:{th:'ทำนายเป็นเส้นแบนที่ค่าล่าสุด จับได้แค่ "ระดับ" ล่าสุดเท่านั้น', en:'A flat line at the last value — captures only the latest level.'}
+  },
+  mean: {
+    name:{th:'Mean (ค่าเฉลี่ย)', en:'Mean (average)'},
+    cap:{level:true, trend:false, season:false}, params:[],
+    fit:function(y){ var n=y.length, mu=mean(y), fit=new Array(n).fill(mu);
+      var fc=[]; for(var k=0;k<H;k++) fc.push(mu); return {fitted:fit, fc:fc}; },
+    formula:['ŷ<sub>t+h</sub> = ȳ = '+frac('1','t')+' Σ y<sub>i</sub>'],
+    shape:{th:'ทำนายเป็นเส้นแบนที่ค่าเฉลี่ยของทั้งอดีต ไม่สนใจว่าข้อมูลกำลังขึ้นหรือลง', en:'A flat line at the overall average — ignores whether the series is rising or falling.'}
+  },
+  drift: {
+    name:{th:'Drift (ลากเส้นตรง)', en:'Drift'},
+    cap:{level:true, trend:true, season:false}, params:[],
+    fit:function(y){ var n=y.length, slope=(y[n-1]-y[0])/(n-1), fit=new Array(n).fill(null);
+      for(var i=1;i<n;i++) fit[i]=y[i-1]+slope;
+      var fc=[]; for(var k=0;k<H;k++) fc.push(y[n-1]+(k+1)*slope); return {fitted:fit, fc:fc}; },
+    formula:['ŷ<sub>t+h</sub> = y<sub>t</sub> + h · '+frac('y<sub>t</sub> − y<sub>1</sub>','t − 1')],
+    shape:{th:'ลากเส้นตรงจากจุดแรกไปจุดสุดท้ายแล้วต่อออกไป จับแนวโน้มแบบหยาบๆ', en:'Draws a straight line from first to last point and extends it — a crude trend.'}
+  },
+  ma: {
+    name:{th:'Moving Average (เกลี่ยเรียบ)', en:'Moving Average'},
+    cap:{level:true, trend:false, season:false},
+    params:[{key:'window', name:{th:'ขนาดหน้าต่าง w', en:'Window w'}, min:2, max:12, step:1}],
+    fit:function(y){ var n=y.length, w=MP.window, fit=new Array(n).fill(null);
+      for(var i=w;i<n;i++){ var s=0; for(var j=i-w;j<i;j++) s+=y[j]; fit[i]=s/w; }
+      var last=0; for(var q=n-w;q<n;q++) last+=y[q]; last/=w;
+      var fc=[]; for(var k=0;k<H;k++) fc.push(last); return {fitted:fit, fc:fc}; },
+    formula:['ŷ<sub>t+1</sub> = '+frac('1','w')+' (y<sub>t−w+1</sub> + … + y<sub>t</sub>)'],
+    shape:{th:'เฉลี่ยค่าใน w ช่วงล่าสุดเพื่อกรอง noise ออก เส้นเรียบแต่ "หน่วง" ตามหลังข้อมูลจริง', en:'Averages the last w points to filter noise — smooth but lags behind the real data.'}
+  },
+  ses: {
+    name:{th:'Simple Exp. Smoothing (α)', en:'Simple Exp. Smoothing (α)'},
+    cap:{level:true, trend:false, season:false},
+    params:[{key:'alpha', name:{th:'α (ระดับ)', en:'α (level)'}, min:0.05, max:0.95, step:0.05}],
+    fit:function(y){ var n=y.length, a=MP.alpha, l=y[0], fit=new Array(n).fill(null);
+      for(var i=1;i<n;i++){ fit[i]=l; l=a*y[i]+(1-a)*l; }
+      var fc=[]; for(var k=0;k<H;k++) fc.push(l); return {fitted:fit, fc:fc}; },
+    formula:['ℓ<sub>t</sub> = α y<sub>t</sub> + (1−α) ℓ<sub>t−1</sub>', 'ŷ<sub>t+h</sub> = ℓ<sub>t</sub>'],
+    shape:{th:'ถ่วงน้ำหนักอดีตแบบลดหลั่น (α มาก = เชื่อข้อมูลใหม่มาก) พยากรณ์เป็นเส้นแบน เพราะมีแต่ "ระดับ"', en:'Exponentially weights the past (larger α trusts recent data more). Forecast is flat — it has only a "level".'}
+  },
+  holt: {
+    name:{th:'Holt (α, β) ระดับ+แนวโน้ม', en:'Holt (α, β) level+trend'},
+    cap:{level:true, trend:true, season:false},
+    params:[
+      {key:'alpha', name:{th:'α (ระดับ)', en:'α (level)'}, min:0.05, max:0.95, step:0.05},
+      {key:'beta', name:{th:'β (แนวโน้ม)', en:'β (trend)'}, min:0.05, max:0.95, step:0.05}
+    ],
+    fit:function(y){ var n=y.length, a=MP.alpha, b=MP.beta, l=y[0], tr=y[1]-y[0], fit=new Array(n).fill(null);
+      for(var i=1;i<n;i++){ fit[i]=l+tr; var lo=l; l=a*y[i]+(1-a)*(l+tr); tr=b*(l-lo)+(1-b)*tr; }
+      var fc=[]; for(var k=0;k<H;k++) fc.push(l+(k+1)*tr); return {fitted:fit, fc:fc}; },
+    formula:['ℓ<sub>t</sub> = α y<sub>t</sub> + (1−α)(ℓ<sub>t−1</sub> + b<sub>t−1</sub>)',
+             'b<sub>t</sub> = β(ℓ<sub>t</sub> − ℓ<sub>t−1</sub>) + (1−β) b<sub>t−1</sub>',
+             'ŷ<sub>t+h</sub> = ℓ<sub>t</sub> + h · b<sub>t</sub>'],
+    shape:{th:'เพิ่ม "องค์ประกอบแนวโน้ม" b ทำให้พยากรณ์เป็นเส้นเอียงตามเทรนด์ล่าสุด แต่ยังไม่มีฤดูกาล', en:'Adds a trend component b, so the forecast slopes with the latest trend — but still no seasonality.'}
+  },
+  holtwinters: {
+    name:{th:'Holt-Winters (α, β, γ) ครบ 3 ส่วน', en:'Holt-Winters (α, β, γ) all 3'},
+    cap:{level:true, trend:true, season:true},
+    params:[
+      {key:'alpha', name:{th:'α (ระดับ)', en:'α (level)'}, min:0.05, max:0.95, step:0.05},
+      {key:'beta', name:{th:'β (แนวโน้ม)', en:'β (trend)'}, min:0.05, max:0.95, step:0.05},
+      {key:'gamma', name:{th:'γ (ฤดูกาล)', en:'γ (season)'}, min:0.05, max:0.95, step:0.05}
+    ],
+    fit:function(y){ var n=y.length, a=MP.alpha, b=MP.beta, g=MP.gamma, m=SIG.per;
+      var fit=new Array(n).fill(null);
+      if (n < 2*m) { return {fitted:fit, fc:new Array(H).fill(y[n-1])}; }
+      var first=mean(y.slice(0,m)), second=mean(y.slice(m,2*m));
+      var l=first, tr=(second-first)/m;
+      var sea=new Array(n);
+      for(var i=0;i<m;i++) sea[i]=y[i]-first;
+      for(var tI=m;tI<n;tI++){
+        fit[tI]=l+tr+sea[tI-m];
+        var lo=l;
+        l=a*(y[tI]-sea[tI-m])+(1-a)*(l+tr);
+        tr=b*(l-lo)+(1-b)*tr;
+        sea[tI]=g*(y[tI]-l)+(1-g)*sea[tI-m];
+      }
+      var fc=[];
+      for(var k=0;k<H;k++){ var idx=n-m+(k%m); fc.push(l+(k+1)*tr+sea[idx]); }
+      return {fitted:fit, fc:fc}; },
+    formula:['ℓ<sub>t</sub> = α(y<sub>t</sub> − s<sub>t−m</sub>) + (1−α)(ℓ<sub>t−1</sub> + b<sub>t−1</sub>)',
+             'b<sub>t</sub> = β(ℓ<sub>t</sub> − ℓ<sub>t−1</sub>) + (1−β) b<sub>t−1</sub>',
+             's<sub>t</sub> = γ(y<sub>t</sub> − ℓ<sub>t</sub>) + (1−γ) s<sub>t−m</sub>',
+             'ŷ<sub>t+h</sub> = ℓ<sub>t</sub> + h · b<sub>t</sub> + s<sub>t+h−m</sub>'],
+    shape:{th:'จับครบ ระดับ+แนวโน้ม+ฤดูกาล พยากรณ์จึงเอียงตามเทรนด์ "และ" ซ้ำคลื่นฤดูกาลได้ (ต้องรู้คาบ m)', en:'Captures level+trend+season, so the forecast slopes with the trend AND repeats the seasonal wave (needs the period m).'}
+  }
+};
+var MODEL_ORDER = ['naive','mean','drift','ma','ses','holt','holtwinters'];
+
+/* ============ UI builders ============ */
+function buildModelSelect(){
+  var sel=document.getElementById('modelSel'); sel.innerHTML='';
+  MODEL_ORDER.forEach(function(k){ var o=document.createElement('option'); o.value=k; o.textContent=MODELS[k].name[currentLang]; sel.appendChild(o); });
+  sel.value=currentModel;
+}
+function buildModelParams(){
+  var area=document.getElementById('modelParams'); area.innerHTML='';
+  MODELS[currentModel].params.forEach(function(pr){
+    var g=document.createElement('div'); g.className='slider-group';
+    var head=document.createElement('div'); head.className='slider-header';
+    var nm=document.createElement('span'); nm.className='slider-name'; nm.textContent=pr.name[currentLang];
+    var val=document.createElement('span'); val.className='slider-val'; val.id='mv_'+pr.key;
+    val.textContent=Number(MP[pr.key]).toFixed(pr.step<1?2:0);
+    head.appendChild(nm); head.appendChild(val);
+    var inp=document.createElement('input'); inp.type='range'; inp.min=pr.min; inp.max=pr.max; inp.step=pr.step; inp.value=MP[pr.key];
+    inp.addEventListener('input', function(){ MP[pr.key]=parseFloat(this.value); document.getElementById('mv_'+pr.key).textContent=Number(MP[pr.key]).toFixed(pr.step<1?2:0); render(); });
+    g.appendChild(head); g.appendChild(inp); area.appendChild(g);
+  });
+  if (currentModel==='holtwinters'){
+    var note=document.createElement('div'); note.style.cssText='font-size:13px;font-weight:600;color:#888;line-height:1.4;';
+    note.innerHTML=t('คาบฤดูกาล m ถูกตั้งให้ตรงกับที่สร้างไว้ (m = '+SIG.per+') อัตโนมัติ', 'Seasonal period m is auto-set to the true value (m = '+SIG.per+').');
+    area.appendChild(note);
+  }
+}
+
+function onSignal(){
+  SIG.slope=parseFloat(document.getElementById('slope').value);
+  SIG.amp=parseFloat(document.getElementById('amp').value);
+  SIG.per=parseInt(document.getElementById('per').value);
+  SIG.noise=parseFloat(document.getElementById('noise').value);
+  document.getElementById('vSlope').textContent=SIG.slope.toFixed(2);
+  document.getElementById('vAmp').textContent=SIG.amp.toFixed(SIG.amp%1?1:0);
+  document.getElementById('vPer').textContent=SIG.per;
+  document.getElementById('vNoise').textContent=SIG.noise.toFixed(1);
+  buildSeries();
+  if (currentModel==='holtwinters') buildModelParams();
+  render();
+}
+function setMode(mode){ SIG.mode=mode; document.querySelectorAll('#segMode button').forEach(function(b){ b.classList.toggle('active', b.dataset.mode===mode); }); buildSeries(); render(); }
+function newSample(){ SIG.seed=(Math.random()*1e9)|0; buildSeries(); render(); }
+function onModelChange(){ currentModel=document.getElementById('modelSel').value; buildModelParams(); render(); }
+
+/* ============ Canvas ============ */
+var canvas=document.getElementById('cvs'), ctx=canvas.getContext('2d');
+function resizeCanvas(){
+  var W=canvas.parentElement.clientWidth-40, Hh=340;
+  canvas.style.width=W+'px'; canvas.style.height=Hh+'px';
+  canvas.width=W*window.devicePixelRatio; canvas.height=Hh*window.devicePixelRatio;
+  ctx.setTransform(1,0,0,1,0,0); ctx.scale(window.devicePixelRatio,window.devicePixelRatio);
+  render();
+}
+window.addEventListener('resize', resizeCanvas);
+
+function render(){
+  var n=N_HIST, L=n+H;
+  var hist=Yfull.slice(0,n);
+  var truth=Yfull.slice(n, L);
+  var res=MODELS[currentModel].fit(hist);
+  var fitted=res.fitted, fc=res.fc;
+
+  // metrics on holdout
+  var se=0, ae=0;
+  for(var i=0;i<H;i++){ var e=truth[i]-fc[i]; se+=e*e; ae+=Math.abs(e); }
+  var rmse=Math.sqrt(se/H), mae=ae/H;
+
+  drawChart(hist, fitted, fc, truth);
+
+  document.getElementById('sMae').textContent=fmt(mae);
+  document.getElementById('sRmse').textContent=fmt(rmse);
+  document.getElementById('sSigma').textContent=fmt(SIG.noise);
+  document.getElementById('graphTitle').textContent=MODELS[currentModel].name[currentLang];
+
+  renderCaptures();
+  renderFormula();
+  renderInsight(rmse);
+}
+
+function drawChart(hist, fitted, fc, truth){
+  var n=hist.length, L=n+H;
+  var W=canvas.offsetWidth, Hh=canvas.offsetHeight;
+  ctx.clearRect(0,0,W,Hh);
+  var pad={top:18, bottom:30, left:34, right:14};
+  var cw=W-pad.left-pad.right, ch=Hh-pad.top-pad.bottom;
+
+  var all=hist.concat(fc).concat(truth);
+  var ymin=Math.min.apply(null,all), ymax=Math.max.apply(null,all);
+  var padY=(ymax-ymin)*0.12||1; ymin-=padY; ymax+=padY;
+
+  var X=function(t2){ return pad.left+(t2/(L-1))*cw; };
+  var Y=function(v){ return pad.top+ch-((v-ymin)/(ymax-ymin))*ch; };
+
+  // y gridlines
+  ctx.strokeStyle='#f0f0f0'; ctx.lineWidth=1; ctx.fillStyle='#aaa';
+  ctx.font='12px "IBM Plex Sans",sans-serif'; ctx.textAlign='right';
+  for(var gy=0;gy<=4;gy++){ var vv=ymin+(ymax-ymin)*gy/4; var py=Y(vv);
+    ctx.beginPath(); ctx.moveTo(pad.left,py); ctx.lineTo(W-pad.right,py); ctx.stroke();
+    ctx.fillText(vv.toFixed(0), pad.left-6, py+4); }
+
+  // forecast region divider + shading
+  var xd=X(n-1);
+  ctx.fillStyle='rgba(124,58,237,0.05)';
+  ctx.fillRect(xd, pad.top, (W-pad.right)-xd, ch);
+  ctx.strokeStyle='#c9b8f0'; ctx.setLineDash([4,4]); ctx.lineWidth=1.5;
+  ctx.beginPath(); ctx.moveTo(xd,pad.top); ctx.lineTo(xd,pad.top+ch); ctx.stroke(); ctx.setLineDash([]);
+  ctx.fillStyle='#7c3aed'; ctx.font='700 12px "IBM Plex Sans",sans-serif'; ctx.textAlign='left';
+  ctx.fillText(t('อนาคต','forecast'), xd+5, pad.top+13);
+
+  // x ticks
+  ctx.fillStyle='#999'; ctx.font='12px "IBM Plex Sans",sans-serif'; ctx.textAlign='center';
+  for(var tx=0;tx<L;tx+=Math.ceil(L/8)){ ctx.fillText(tx, X(tx), pad.top+ch+16); }
+
+  // true future (dotted gray)
+  ctx.strokeStyle='#999'; ctx.setLineDash([2,3]); ctx.lineWidth=2; ctx.beginPath();
+  ctx.moveTo(X(n-1), Y(hist[n-1]));
+  for(var a=0;a<H;a++){ ctx.lineTo(X(n+a), Y(truth[a])); }
+  ctx.stroke(); ctx.setLineDash([]);
+
+  // fitted (solid blue over history)
+  ctx.strokeStyle='#0d6efd'; ctx.lineWidth=2.5; ctx.beginPath(); var started=false;
+  for(var f=0;f<n;f++){ if(fitted[f]===null){ started=false; continue; }
+    var px=X(f), py=Y(fitted[f]); if(!started){ ctx.moveTo(px,py); started=true; } else ctx.lineTo(px,py); }
+  ctx.stroke();
+
+  // forecast (dashed blue into future)
+  ctx.strokeStyle='#0d6efd'; ctx.setLineDash([6,4]); ctx.lineWidth=3; ctx.beginPath();
+  ctx.moveTo(X(n-1), Y(hist[n-1]));
+  for(var c=0;c<H;c++){ ctx.lineTo(X(n+c), Y(fc[c])); }
+  ctx.stroke(); ctx.setLineDash([]);
+
+  // actual history (dark line + dots) on top
+  ctx.strokeStyle='#1a1a1a'; ctx.lineWidth=1.5; ctx.beginPath();
+  for(var h2=0;h2<n;h2++){ var px2=X(h2), py2=Y(hist[h2]); h2?ctx.lineTo(px2,py2):ctx.moveTo(px2,py2); }
+  ctx.stroke();
+  ctx.fillStyle='#1a1a1a';
+  for(var d=0;d<n;d++){ ctx.beginPath(); ctx.arc(X(d), Y(hist[d]), 2.2, 0, 2*Math.PI); ctx.fill(); }
+}
+
+function renderCaptures(){
+  var cap=MODELS[currentModel].cap;
+  var box=document.getElementById('captureChips');
+  function chip(on, labTh, labEn){ return '<div class="chip '+(on?'on':'off')+'">'+(on?'✓':'✗')+' '+t(labTh,labEn)+'</div>'; }
+  box.innerHTML = chip(cap.level,'ระดับ (Level)','Level') + chip(cap.trend,'แนวโน้ม (Trend)','Trend') + chip(cap.season,'ฤดูกาล (Season)','Season');
+}
+
+function renderFormula(){
+  var box=document.getElementById('formulaBox');
+  var lines=MODELS[currentModel].formula;
+  var html='<div class="fhead">'+t('สมการของโมเดล','Model equations')+'</div>';
+  lines.forEach(function(ln){ html+='<div class="formula-row">'+ln+'</div>'; });
+  box.innerHTML=html;
+}
+
+function renderInsight(rmse){
+  var el=document.getElementById('insight');
+  var cap=MODELS[currentModel].cap;
+  var base=MODELS[currentModel].shape[currentLang];
+  var warn=false, extra='';
+  if (SIG.amp>=4 && !cap.season){
+    warn=true;
+    extra=t(' · ข้อมูลนี้มีฤดูกาลชัด แต่โมเดลนี้ไม่มีส่วนฤดูกาล เส้นทำนายจึงไม่ซ้ำคลื่น และ RMSE สูงกว่า σ มาก',
+             ' · This series is clearly seasonal, but this model has no seasonal part, so the forecast does not repeat the wave and RMSE is well above σ.');
+  } else if (Math.abs(SIG.slope)>=0.4 && !cap.trend){
+    warn=true;
+    extra=t(' · ข้อมูลมีแนวโน้มชัด แต่โมเดลนี้ไม่มีองค์ประกอบแนวโน้ม เส้นทำนายจึงแบน—หลุดจากทิศทางจริง',
+             ' · The series has a clear trend, but this model has no trend component, so the forecast stays flat and drifts off the real direction.');
+  } else if (cap.level && cap.trend && cap.season){
+    extra=t(' · จับครบทุกองค์ประกอบ RMSE จึงลงมาใกล้ σ ≈ '+SIG.noise.toFixed(1)+' ซึ่งเป็นขีดจำกัดล่าง (ทำได้ดีกว่านี้ไม่ได้ เพราะ noise สุ่มล้วนๆ)',
+             ' · It captures every component, so RMSE drops close to σ ≈ '+SIG.noise.toFixed(1)+', the lower bound (you cannot beat pure random noise).');
+  }
+  el.className='insight'+(warn?' warn':'');
+  el.innerHTML='<b>'+MODELS[currentModel].name[currentLang]+':</b> '+base+extra;
+}
+
+/* ============ Init ============ */
+buildSeries();
+buildModelSelect();
+buildModelParams();
+setLang('th');
+setTimeout(resizeCanvas, 50);
+</script>
+</body>
+</html>
