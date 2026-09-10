@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Decision Tree Playground</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;600;700;800&family=IBM+Plex+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: "Noto Sans Thai","IBM Plex Sans",sans-serif; font-size: 18px; font-weight: 600; background: #f5f5f5; color: #1a1a1a; min-height: 100vh; }
+
+.header { background: #fff; border-bottom: 3px solid #1a1a1a; padding: 16px 32px; display: flex; align-items: center; justify-content: space-between; }
+.header-left { display: flex; align-items: baseline; gap: 14px; }
+.header h1 { font-size: 28px; font-weight: 800; }
+
+.home-btn { text-decoration: none; color: #6c757d; font-size: 15px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border: 1px solid #dee2e6; border-radius: 6px; background: #fff; transition: all 0.2s; flex-shrink: 0; }
+.home-btn:hover { background: #f8f9fa; color: #0d6efd; }
+
+.lang-toggle { display: flex; border: 2px solid #1a1a1a; border-radius: 8px; overflow: hidden; }
+.lang-btn { font-family: inherit; font-size: 16px; font-weight: 700; padding: 6px 16px; border: none; cursor: pointer; background: #fff; color: #888; transition: all .12s; }
+.lang-btn.active { background: #1a1a1a; color: #fff; }
+
+.main { max-width: 1050px; margin: 24px auto; padding: 0 24px; }
+.card { background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 20px; margin-bottom: 16px; }
+.card-title { font-size: 20px; font-weight: 800; margin-bottom: 14px; border-bottom: 1px solid #eee; padding-bottom: 8px; }
+
+.layout { display: grid; grid-template-columns: 320px 1fr; gap: 20px; }
+@media (max-width: 850px) { .layout { grid-template-columns: 1fr; } }
+
+.seg { display: flex; border: 2px solid #1a1a1a; border-radius: 8px; overflow: hidden; margin-bottom: 6px; }
+.seg button { flex: 1; font-family: inherit; font-size: 13px; font-weight: 700; padding: 8px 4px; border: none; border-right: 2px solid #1a1a1a; cursor: pointer; background: #fff; color: #888; transition: all .12s; }
+.seg button:last-child { border-right: none; }
+.seg button.active { background: #1a1a1a; color: #fff; }
+.field-label { font-size: 16px; font-weight: 700; margin-bottom: 6px; }
+.sub-hint { font-size: 13px; font-weight: 600; color: #888; margin-top: 4px; line-height: 1.4; }
+
+.slider-group { margin-bottom: 18px; }
+.slider-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px; }
+.slider-name { font-size: 16px; font-weight: 700; }
+.slider-val { font-size: 22px; font-weight: 800; min-width: 44px; text-align: right; color: #1a1a1a; }
+input[type=range] { width: 100%; cursor: pointer; }
+input[type=range]#depthSlider { accent-color: #1a1a1a; }
+input[type=range]#minSlider { accent-color: #fd7e14; }
+input[type=range]#noiseSlider { accent-color: #6c757d; }
+
+.resample-btn { width: 100%; font-family: inherit; font-size: 15px; font-weight: 700; padding: 10px; border: 2px solid #1a1a1a; border-radius: 8px; background: #fff; cursor: pointer; margin-bottom: 4px; transition: all .12s; }
+.resample-btn:hover { background: #1a1a1a; color: #fff; }
+
+canvas { width: 100%; display: block; border-radius: 4px; background: #fff; }
+
+.stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 16px; }
+.stat { background: #f8f9fa; border: 1px solid #e0e0e0; border-radius: 6px; padding: 10px 6px; text-align: center; }
+.stat-val { font-size: 20px; font-weight: 800; }
+.stat-lbl { font-size: 12px; font-weight: 600; color: #555; margin-top: 2px; }
+@media (max-width: 500px) { .stat-grid { grid-template-columns: repeat(2, 1fr); } }
+
+.legend { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 12px; justify-content: center; }
+.legend-item { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; color: #555; }
+.legend-color { width: 16px; height: 12px; border-radius: 3px; }
+
+.decision { font-size: 17px; font-weight: 800; padding: 12px 16px; border-radius: 6px; margin-top: 16px; text-align: center; border: 2px solid; }
+.decision.under { background: #e7f1ff; border-color: #0d6efd; color: #0a4fb0; }
+.decision.good { background: #e8f7f1; border-color: #20c997; color: #0f7a5a; }
+.decision.over { background: #fdecea; border-color: #dc3545; color: #b02a37; }
+
+.insight { font-size: 16px; font-weight: 600; color: #333; background: #f8f9fa; border-left: 4px solid #1a1a1a; padding: 12px 16px; border-radius: 0 6px 6px 0; margin-top: 16px; line-height: 1.5; }
+.insight.mis { border-left-color: #dc3545; background: #fff6f6; color: #7d2020; }
+.insight b { color: #1a1a1a; }
+.insight.mis b { color: #7d2020; }
+
+.questions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.q-chip { font-size: 15px; font-weight: 600; padding: 6px 14px; border: 1px solid #bbb; border-radius: 20px; color: #444; background: #fafafa; line-height: 1.4; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-left">
+    <a href="index.html" class="home-btn" data-th="← หน้าแรก" data-en="← Home">← Home</a>
+    <h1>Decision Tree Playground</h1>
+  </div>
+  <div class="lang-toggle">
+    <button class="lang-btn active" onclick="setLang('th')">TH</button>
+    <button class="lang-btn" onclick="setLang('en')">EN</button>
+  </div>
+</div>
+
+<div class="main">
+  <div class="layout">
+
+    <!-- LEFT: CONTROLS -->
+    <div>
+      <div class="card">
+        <div class="card-title" data-th="ตั้งค่าพารามิเตอร์" data-en="Adjust Parameters">ตั้งค่าพารามิเตอร์</div>
+
+        <div class="slider-group">
+          <div class="field-label" data-th="รูปแบบข้อมูล" data-en="Dataset shape">รูปแบบข้อมูล</div>
+          <div class="seg" id="segData">
+            <button data-ds="blobs" class="active" onclick="setDataset('blobs')" data-th="กลุ่มก้อน" data-en="Blobs">กลุ่มก้อน</button>
+            <button data-ds="moons" onclick="setDataset('moons')" data-th="พระจันทร์เสี้ยว" data-en="Moons">พระจันทร์เสี้ยว</button>
+            <button data-ds="xor" onclick="setDataset('xor')" data-th="XOR" data-en="XOR">XOR</button>
+          </div>
+          <div class="sub-hint" id="dsHint"></div>
+        </div>
+
+        <div class="slider-group">
+          <div class="slider-header">
+            <span class="slider-name" data-th="ความลึกสูงสุด (max depth)" data-en="Max depth">ความลึกสูงสุด (max depth)</span>
+            <span class="slider-val" id="depthVal">3</span>
+          </div>
+          <input type="range" id="depthSlider" min="1" max="5" step="1" value="3" oninput="onInput()">
+          <div class="sub-hint" data-th="ต้นไม้ลึกขึ้น = แบ่งข้อมูลละเอียดขึ้น แต่เสี่ยง overfit" data-en="Deeper tree = finer splits, but higher risk of overfitting.">ต้นไม้ลึกขึ้น = แบ่งข้อมูลละเอียดขึ้น แต่เสี่ยง overfit</div>
+        </div>
+
+        <div class="slider-group">
+          <div class="slider-header">
+            <span class="slider-name" data-th="min samples per split" data-en="Min samples per split">min samples per split</span>
+            <span class="slider-val" style="color:#fd7e14;" id="minVal">6</span>
+          </div>
+          <input type="range" id="minSlider" min="2" max="30" step="1" value="6" oninput="onInput()">
+          <div class="sub-hint" data-th="โหนดที่มีข้อมูลน้อยกว่านี้จะไม่ถูกแบ่งต่อ (ช่วยกัน overfit)" data-en="A node with fewer samples than this will not be split further (helps limit overfitting).">โหนดที่มีข้อมูลน้อยกว่านี้จะไม่ถูกแบ่งต่อ (ช่วยกัน overfit)</div>
+        </div>
+
+        <div class="slider-group">
+          <div class="slider-header">
+            <span class="slider-name" data-th="สัญญาณรบกวน (noise)" data-en="Noise">สัญญาณรบกวน (noise)</span>
+            <span class="slider-val" style="color:#6c757d;" id="noiseVal">20%</span>
+          </div>
+          <input type="range" id="noiseSlider" min="0" max="60" step="5" value="20" oninput="onInput()">
+        </div>
+
+        <button class="resample-btn" onclick="resample()" data-th="🎲 สุ่มข้อมูลใหม่" data-en="🎲 Resample data">🎲 สุ่มข้อมูลใหม่</button>
+      </div>
+
+      <div class="card">
+        <div class="card-title" data-th="คำถามชวนคิด" data-en="Discussion Questions">คำถามชวนคิด</div>
+        <div class="questions">
+          <div class="q-chip" data-th="ทำไมเส้นแบ่งของ Decision Tree เป็นเส้นตรงแนวตั้ง/นอนเสมอ ไม่โค้ง?" data-en="Why are a decision tree's boundaries always straight vertical/horizontal lines, never curved?">ทำไมเส้นแบ่งของ Decision Tree เป็นเส้นตรงแนวตั้ง/นอนเสมอ ไม่โค้ง?</div>
+          <div class="q-chip" data-th="ลองตั้งข้อมูลเป็น XOR แล้วดูที่ depth=2 — ทำไม accuracy ยังไม่ดีทั้งที่ในทางทฤษฎีน่าจะแยกได้ด้วยการตัด 2 เส้น?" data-en="Try XOR data at depth=2 — why is accuracy still poor even though 2 cuts should, in theory, separate it?">ลองตั้งข้อมูลเป็น XOR แล้วดูที่ depth=2 — ทำไม accuracy ยังไม่ดีทั้งที่ในทางทฤษฎีน่าจะแยกได้ด้วยการตัด 2 เส้น?</div>
+          <div class="q-chip" data-th="เพิ่ม min samples per split แล้ว holdout accuracy ดีขึ้นไหม เทียบกับการลด max depth?" data-en="Does raising min samples per split help holdout accuracy as much as lowering max depth?">เพิ่ม min samples per split แล้ว holdout accuracy ดีขึ้นไหม เทียบกับการลด max depth?</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT: PLOTS -->
+    <div>
+      <div class="card">
+        <div class="card-title" data-th="ขอบเขตการตัดสินใจ (decision boundary)" data-en="Decision boundary">ขอบเขตการตัดสินใจ (decision boundary)</div>
+        <canvas id="cvsScatter" height="360"></canvas>
+        <div class="legend">
+          <div class="legend-item"><div class="legend-color" style="background:#0d6efd;"></div><span data-th="คลาส A (จุด/พื้นที่)" data-en="Class A (point/region)">คลาส A (จุด/พื้นที่)</span></div>
+          <div class="legend-item"><div class="legend-color" style="background:#dc3545;"></div><span data-th="คลาส B (จุด/พื้นที่)" data-en="Class B (point/region)">คลาส B (จุด/พื้นที่)</span></div>
+          <div class="legend-item"><div style="width:10px; height:10px; border:2px solid #1a1a1a; border-radius:50%;"></div><span data-th="วงแหวน = ข้อมูล holdout" data-en="Ring = holdout point">วงแหวน = ข้อมูล holdout</span></div>
+        </div>
+        <div class="stat-grid">
+          <div class="stat" style="border-bottom: 4px solid #0d6efd;"><div class="stat-val" style="color:#0d6efd;" id="trainAccOut">–</div><div class="stat-lbl" data-th="train accuracy" data-en="train accuracy">train accuracy</div></div>
+          <div class="stat" style="border-bottom: 4px solid #dc3545;"><div class="stat-val" style="color:#dc3545;" id="holdAccOut">–</div><div class="stat-lbl" data-th="holdout accuracy" data-en="holdout accuracy">holdout accuracy</div></div>
+          <div class="stat" style="border-bottom: 4px solid #1a1a1a;"><div class="stat-val" id="leavesOut">–</div><div class="stat-lbl" data-th="จำนวนใบ (leaves)" data-en="leaves">จำนวนใบ (leaves)</div></div>
+          <div class="stat" style="border-bottom: 4px solid #6c757d;"><div class="stat-val" id="depthUsedOut">–</div><div class="stat-lbl" data-th="ความลึกจริง" data-en="actual depth">ความลึกจริง</div></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title" data-th="โครงสร้างต้นไม้" data-en="Tree structure">โครงสร้างต้นไม้</div>
+        <canvas id="cvsTree" height="320"></canvas>
+      </div>
+
+      <div class="card">
+        <div class="card-title" data-th="Accuracy เทียบกับความลึกของต้นไม้" data-en="Accuracy vs. Tree Depth">Accuracy เทียบกับความลึกของต้นไม้</div>
+        <canvas id="cvsCurve" height="260"></canvas>
+        <div class="legend">
+          <div class="legend-item"><div class="legend-color" style="background:#0d6efd;"></div><span data-th="Train accuracy" data-en="Train accuracy">Train accuracy</span></div>
+          <div class="legend-item"><div class="legend-color" style="background:#dc3545;"></div><span data-th="Holdout accuracy" data-en="Holdout accuracy">Holdout accuracy</span></div>
+        </div>
+        <div class="decision" id="decisionBox"></div>
+        <div class="insight" id="story"></div>
+        <div class="insight mis" id="mis"></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+/* ---------- language ---------- */
+var currentLang = 'th';
+function t(th, en){ return currentLang === 'en' ? en : th; }
+function setLang(lang){
+  currentLang = lang;
+  document.querySelectorAll('.lang-btn').forEach(b => b.classList.toggle('active', b.textContent.trim().toLowerCase() === lang));
+  document.querySelectorAll('[data-th]').forEach(el => { var v = el.getAttribute('data-'+lang); if(v!==null) el.innerHTML = v; });
+  render();
+}
+
+/* ---------- seeded RNG ---------- */
+function mulberry32(a){
+  return function(){
+    a |= 0; a = (a + 0x6D2B79F5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+function gaussian(rng){ const u = 1 - rng(), v = rng(); return Math.sqrt(-2*Math.log(u)) * Math.cos(2*Math.PI*v); }
+function clip01(v){ return Math.min(0.98, Math.max(0.02, v)); }
+
+/* ---------- dataset generators ---------- */
+function genBlobs(n, noise, rng){
+  const pts=[], s=0.07+noise*0.22;
+  for(let i=0;i<n;i++){
+    const cls = i%2;
+    const cx = cls? 0.72:0.28, cy = cls? 0.72:0.28;
+    pts.push({x:clip01(cx+gaussian(rng)*s), y:clip01(cy+gaussian(rng)*s), cls});
+  }
+  return pts;
+}
+function genMoons(n, noise, rng){
+  const raw=[];
+  for(let i=0;i<n;i++){
+    const cls = i%2;
+    const th = rng()*Math.PI;
+    let px,py;
+    if(cls===0){ px=Math.cos(th); py=Math.sin(th); }
+    else { px=1-Math.cos(th); py=1-Math.sin(th)-0.5; }
+    raw.push({px,py,cls});
+  }
+  const xs=raw.map(p=>p.px), ys=raw.map(p=>p.py);
+  const xmin=Math.min(...xs), xmax=Math.max(...xs), ymin=Math.min(...ys), ymax=Math.max(...ys);
+  const s=0.03+noise*0.13;
+  return raw.map(p=>({
+    x: clip01((p.px-xmin)/(xmax-xmin)*0.8+0.1 + gaussian(rng)*s),
+    y: clip01((p.py-ymin)/(ymax-ymin)*0.8+0.1 + gaussian(rng)*s),
+    cls: p.cls
+  }));
+}
+function genXor(n, noise, rng){
+  const pts=[], flipP = noise*0.5;
+  for(let i=0;i<n;i++){
+    const x=rng(), y=rng();
+    let cls = ((x>0.5) !== (y>0.5)) ? 1:0;
+    if(rng()<flipP) cls = 1-cls;
+    pts.push({x,y,cls});
+  }
+  return pts;
+}
+function generateData(ds, noisePct, seed){
+  const rng = mulberry32(seed);
+  const noise = noisePct/100, n=140;
+  let pts;
+  if(ds==='blobs') pts=genBlobs(n,noise,rng);
+  else if(ds==='moons') pts=genMoons(n,noise,rng);
+  else pts=genXor(n,noise,rng);
+  // shuffle then split 75/25 train/holdout
+  for(let i=pts.length-1;i>0;i--){ const j=Math.floor(rng()*(i+1)); [pts[i],pts[j]]=[pts[j],pts[i]]; }
+  const cut=Math.floor(pts.length*0.75);
+  return { train: pts.slice(0,cut), hold: pts.slice(cut) };
+}
+
+/* ---------- CART decision tree (Gini) ---------- */
+function giniOf(pts){
+  if(pts.length===0) return 0;
+  const c0 = pts.filter(p=>p.cls===0).length, c1 = pts.length-c0;
+  const p0=c0/pts.length, p1=c1/pts.length;
+  return 1 - p0*p0 - p1*p1;
+}
+function buildTree(pts, depth, maxDepth, minSamples){
+  const c0 = pts.filter(p=>p.cls===0).length, c1 = pts.length-c0;
+  const node = { n: pts.length, counts:[c0,c1], pred: c0>=c1?0:1, depth };
+  if(depth>=maxDepth || pts.length<minSamples || c0===0 || c1===0){ node.leaf=true; return node; }
+  let best=null;
+  ['x','y'].forEach(feat=>{
+    const vals=[...new Set(pts.map(p=>p[feat]))].sort((a,b)=>a-b);
+    for(let i=0;i<vals.length-1;i++){
+      const thresh=(vals[i]+vals[i+1])/2;
+      const left=pts.filter(p=>p[feat]<=thresh), right=pts.filter(p=>p[feat]>thresh);
+      if(left.length===0||right.length===0) continue;
+      const weighted = (left.length*giniOf(left)+right.length*giniOf(right))/pts.length;
+      if(!best || weighted<best.weighted-1e-9){ best={feat,thresh,weighted,left,right}; }
+    }
+  });
+  if(!best){ node.leaf=true; return node; }
+  node.leaf=false; node.feat=best.feat; node.thresh=best.thresh;
+  node.left=buildTree(best.left, depth+1, maxDepth, minSamples);
+  node.right=buildTree(best.right, depth+1, maxDepth, minSamples);
+  return node;
+}
+function predict(node, p){
+  if(node.leaf) return node.pred;
+  return (p[node.feat] <= node.thresh) ? predict(node.left,p) : predict(node.right,p);
+}
+function accuracyOf(tree, pts){
+  if(pts.length===0) return 0;
+  let correct=0; pts.forEach(p=>{ if(predict(tree,p)===p.cls) correct++; });
+  return correct/pts.length;
+}
+function countLeaves(node){ return node.leaf ? 1 : countLeaves(node.left)+countLeaves(node.right); }
+function actualDepth(node){ return node.leaf ? node.depth : Math.max(actualDepth(node.left), actualDepth(node.right)); }
+
+/* ---------- state ---------- */
+const S = { ds:'blobs', depth:3, minSamples:6, noise:20, seed:1 };
+let DATA = generateData(S.ds, S.noise, S.seed);
+
+function setDataset(ds){
+  S.ds=ds;
+  document.querySelectorAll('#segData button').forEach(b=>b.classList.toggle('active', b.dataset.ds===ds));
+  DATA = generateData(S.ds, S.noise, S.seed);
+  render();
+}
+function onInput(){
+  S.depth=parseInt(document.getElementById('depthSlider').value);
+  S.minSamples=parseInt(document.getElementById('minSlider').value);
+  S.noise=parseInt(document.getElementById('noiseSlider').value);
+  DATA = generateData(S.ds, S.noise, S.seed);
+  render();
+}
+function resample(){
+  S.seed = S.seed + 1 + Math.floor(Math.random()*50);
+  DATA = generateData(S.ds, S.noise, S.seed);
+  render();
+}
+
+/* ---------- compute ---------- */
+function compute(){
+  const tree = buildTree(DATA.train, 0, S.depth, S.minSamples);
+  const trainAcc = accuracyOf(tree, DATA.train);
+  const holdAcc = accuracyOf(tree, DATA.hold);
+  const leaves = countLeaves(tree);
+  const usedDepth = actualDepth(tree);
+  const curve=[];
+  let bestD=1, bestAcc=-1;
+  for(let d=1; d<=5; d++){
+    const tr = buildTree(DATA.train, 0, d, S.minSamples);
+    const ta = accuracyOf(tr, DATA.train), ha = accuracyOf(tr, DATA.hold);
+    curve.push({d,ta,ha});
+    if(ha>bestAcc){ bestAcc=ha; bestD=d; }
+  }
+  const diff = S.depth - bestD;
+  let zone='good';
+  if(diff<=-1) zone='under'; else if(diff>=2) zone='over';
+  return {tree,trainAcc,holdAcc,leaves,usedDepth,curve,bestD,zone};
+}
+
+/* ---------- scatter + region canvas ---------- */
+const cvsS=document.getElementById('cvsScatter'), ctxS=cvsS.getContext('2d');
+function resizeScatter(){
+  const W=cvsS.parentElement.clientWidth-40, H=W>420?380:W;
+  cvsS.style.width=W+'px'; cvsS.style.height=H+'px';
+  cvsS.width=W*window.devicePixelRatio; cvsS.height=H*window.devicePixelRatio;
+  ctxS.setTransform(1,0,0,1,0,0); ctxS.scale(window.devicePixelRatio,window.devicePixelRatio);
+  render();
+}
+window.addEventListener('resize', resizeScatter);
+
+function drawScatter(C){
+  const W=cvsS.offsetWidth, H=cvsS.offsetHeight;
+  ctxS.clearRect(0,0,W,H);
+  const pad=10, size=Math.min(W,H)-pad*2;
+  const ox=(W-size)/2, oy=(H-size)/2;
+  const toPx = (x,y)=>({px: ox+x*size, py: oy+(1-y)*size});
+
+  // region grid
+  const grid=48;
+  for(let gx=0; gx<grid; gx++){
+    for(let gy=0; gy<grid; gy++){
+      const x=(gx+0.5)/grid, y=(gy+0.5)/grid;
+      const cls=predict(C.tree, {x,y});
+      ctxS.fillStyle = cls===0 ? 'rgba(13,110,253,0.14)' : 'rgba(220,53,69,0.14)';
+      ctxS.fillRect(ox+gx*size/grid, oy+size-(gy+1)*size/grid, size/grid+1, size/grid+1);
+    }
+  }
+  ctxS.strokeStyle='#1a1a1a'; ctxS.lineWidth=1.5; ctxS.strokeRect(ox,oy,size,size);
+
+  // points
+  DATA.train.forEach(p=>{
+    const {px,py}=toPx(p.x,p.y);
+    ctxS.beginPath(); ctxS.arc(px,py,4.5,0,Math.PI*2);
+    ctxS.fillStyle = p.cls===0 ? '#0d6efd' : '#dc3545'; ctxS.fill();
+  });
+  DATA.hold.forEach(p=>{
+    const {px,py}=toPx(p.x,p.y);
+    ctxS.beginPath(); ctxS.arc(px,py,5.5,0,Math.PI*2);
+    ctxS.fillStyle = p.cls===0 ? '#0d6efd' : '#dc3545'; ctxS.fill();
+    ctxS.lineWidth=2; ctxS.strokeStyle='#1a1a1a'; ctxS.stroke();
+  });
+}
+
+/* ---------- tree diagram canvas ---------- */
+const cvsT=document.getElementById('cvsTree'), ctxT=cvsT.getContext('2d');
+function resizeTree(){
+  const W=cvsT.parentElement.clientWidth-40, H=320;
+  cvsT.style.width=W+'px'; cvsT.style.height=H+'px';
+  cvsT.width=W*window.devicePixelRatio; cvsT.height=H*window.devicePixelRatio;
+  ctxT.setTransform(1,0,0,1,0,0); ctxT.scale(window.devicePixelRatio,window.devicePixelRatio);
+  render();
+}
+window.addEventListener('resize', resizeTree);
+
+function layoutTree(node, depth, counter){
+  node._depth=depth;
+  if(node.leaf){ node._x=counter.i; counter.i++; return node._x; }
+  const lx=layoutTree(node.left, depth+1, counter);
+  const rx=layoutTree(node.right, depth+1, counter);
+  node._x=(lx+rx)/2;
+  return node._x;
+}
+function drawTreeNode(node, X, Y, leafCount, maxDepth, boxW, boxH){
+  const px=X(node._x), py=Y(node._depth);
+  if(!node.leaf){
+    const clx=X(node.left._x), cly=Y(node.left._depth);
+    const crx=X(node.right._x), cry=Y(node.right._depth);
+    ctxT.strokeStyle='#bbb'; ctxT.lineWidth=1.5;
+    ctxT.beginPath(); ctxT.moveTo(px,py+boxH/2); ctxT.lineTo(clx,cly-boxH/2); ctxT.stroke();
+    ctxT.beginPath(); ctxT.moveTo(px,py+boxH/2); ctxT.lineTo(crx,cry-boxH/2); ctxT.stroke();
+    drawTreeNode(node.left, X, Y, leafCount, maxDepth, boxW, boxH);
+    drawTreeNode(node.right, X, Y, leafCount, maxDepth, boxW, boxH);
+  }
+  const w=Math.min(boxW, 92), h=boxH*0.72;
+  ctxT.fillStyle = node.leaf ? (node.pred===0?'#e7f1ff':'#fdecea') : '#f8f9fa';
+  ctxT.strokeStyle = node.leaf ? (node.pred===0?'#0d6efd':'#dc3545') : '#1a1a1a';
+  ctxT.lineWidth=1.5;
+  roundRect(ctxT, px-w/2, py-h/2, w, h, 6); ctxT.fill(); ctxT.stroke();
+  ctxT.fillStyle='#1a1a1a'; ctxT.font='11px "IBM Plex Sans",sans-serif'; ctxT.textAlign='center';
+  if(node.leaf){
+    ctxT.fillText(t('คลาส ','class ')+(node.pred===0?'A':'B'), px, py-2);
+    ctxT.fillText('n='+node.n, px, py+11);
+  } else {
+    ctxT.fillText(node.feat+' ≤ '+node.thresh.toFixed(2), px, py-2);
+    ctxT.fillText('n='+node.n, px, py+11);
+  }
+}
+function roundRect(ctx,x,y,w,h,r){
+  ctx.beginPath();
+  ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r);
+  ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath();
+}
+function drawTree(C){
+  const W=cvsT.offsetWidth, H=cvsT.offsetHeight;
+  ctxT.clearRect(0,0,W,H);
+  const root = JSON.parse(JSON.stringify(C.tree, (k,v)=> (k==='left'||k==='right'||k==='counts')?v:v )); // deep-ish clone not needed; reuse tree directly
+  const counter={i:0};
+  layoutTree(C.tree, 0, counter);
+  const leafCount=Math.max(1,counter.i), maxDepth=actualDepth(C.tree);
+  const padTop=26, padBot=14, padX=20;
+  const rowH=(H-padTop-padBot)/Math.max(1,maxDepth+1);
+  const colW=(W-padX*2)/leafCount;
+  const X = xi => padX + (xi+0.5)*colW;
+  const Y = d => padTop + d*rowH + rowH/2 - rowH*0.15;
+  drawTreeNode(C.tree, X, Y, leafCount, maxDepth, colW*0.92, rowH*0.8);
+}
+
+/* ---------- accuracy-vs-depth curve canvas ---------- */
+const cvsC=document.getElementById('cvsCurve'), ctxCu=cvsC.getContext('2d');
+function resizeCurve(){
+  const W=cvsC.parentElement.clientWidth-40, H=260;
+  cvsC.style.width=W+'px'; cvsC.style.height=H+'px';
+  cvsC.width=W*window.devicePixelRatio; cvsC.height=H*window.devicePixelRatio;
+  ctxCu.setTransform(1,0,0,1,0,0); ctxCu.scale(window.devicePixelRatio,window.devicePixelRatio);
+  render();
+}
+window.addEventListener('resize', resizeCurve);
+
+function drawCurve(C){
+  const W=cvsC.offsetWidth, H=cvsC.offsetHeight;
+  ctxCu.clearRect(0,0,W,H);
+  const pad={top:16,bottom:28,left:38,right:14};
+  const cw=W-pad.left-pad.right, chH=H-pad.top-pad.bottom;
+  const X = d => pad.left + (d-1)/4*cw;
+  const Y = v => pad.top + chH - v*chH;
+
+  ctxCu.font='12px "IBM Plex Sans",sans-serif'; ctxCu.fillStyle='#999'; ctxCu.textAlign='center';
+  for(let d=1; d<=5; d++){
+    const px=X(d);
+    ctxCu.strokeStyle='#f0f0f0'; ctxCu.lineWidth=1;
+    ctxCu.beginPath(); ctxCu.moveTo(px,pad.top); ctxCu.lineTo(px,pad.top+chH); ctxCu.stroke();
+    ctxCu.fillText(d, px, pad.top+chH+16);
+  }
+  [0,0.5,1].forEach(v=>{
+    ctxCu.fillText((v*100).toFixed(0)+'%', pad.left-14, Y(v)+4);
+  });
+
+  function line(key,color){
+    ctxCu.beginPath();
+    C.curve.forEach((p,i)=>{ const px=X(p.d), py=Y(p[key]); i?ctxCu.lineTo(px,py):ctxCu.moveTo(px,py); });
+    ctxCu.strokeStyle=color; ctxCu.lineWidth=2.5; ctxCu.stroke();
+    C.curve.forEach(p=>{ ctxCu.beginPath(); ctxCu.arc(X(p.d),Y(p[key]),3.5,0,Math.PI*2); ctxCu.fillStyle=color; ctxCu.fill(); });
+  }
+  line('ta','#0d6efd'); line('ha','#dc3545');
+
+  // current depth marker
+  ctxCu.strokeStyle='#1a1a1a'; ctxCu.lineWidth=1.5; ctxCu.setLineDash([4,3]);
+  ctxCu.beginPath(); ctxCu.moveTo(X(S.depth),pad.top); ctxCu.lineTo(X(S.depth),pad.top+chH); ctxCu.stroke();
+  ctxCu.setLineDash([]);
+
+  ctxCu.strokeStyle='#888'; ctxCu.lineWidth=1;
+  ctxCu.beginPath(); ctxCu.moveTo(pad.left,Y(0)); ctxCu.lineTo(W-pad.right,Y(0)); ctxCu.stroke();
+}
+
+/* ---------- text ---------- */
+function pct(v){ return (v*100).toFixed(0)+'%'; }
+function render(){
+  const C=compute();
+
+  document.getElementById('depthVal').textContent=S.depth;
+  document.getElementById('minVal').textContent=S.minSamples;
+  document.getElementById('noiseVal').textContent=S.noise+'%';
+  document.getElementById('dsHint').innerHTML = t(
+    S.ds==='blobs' ? 'สองกลุ่มแยกกันชัดเจน — ต้นไม้ตื้น ๆ ก็แยกได้ดี' :
+    S.ds==='moons' ? 'รูปทรงโค้ง — ต้นไม้ต้องมีความลึกพอควรถึงจะประมาณเส้นโค้งด้วยเส้นตรงได้' :
+                      'รูปแบบ XOR/หมากรุก — การแบ่งครั้งแรกครั้งเดียวไม่ช่วยลด Gini เลย (เพราะแต่ละแกนแยกเดี่ยว ๆ ไม่บอกอะไร) ต้นไม้แบบ greedy จึงมักต้องลึกกว่าที่คาดไว้มากถึงจะแยกกลุ่มได้ดี',
+    S.ds==='blobs' ? 'Two well-separated clusters — even a shallow tree splits them well.' :
+    S.ds==='moons' ? 'Curved shape — the tree needs enough depth to approximate the curve with straight cuts.' :
+                      "XOR/checkerboard pattern — the very first split never reduces Gini on its own (neither axis alone is informative), so a greedy tree typically needs far more depth than you'd expect to separate it well.");
+
+  document.getElementById('trainAccOut').textContent = pct(C.trainAcc);
+  document.getElementById('holdAccOut').textContent = pct(C.holdAcc);
+  document.getElementById('leavesOut').textContent = C.leaves;
+  document.getElementById('depthUsedOut').textContent = C.usedDepth;
+
+  const dec=document.getElementById('decisionBox');
+  dec.className='decision '+C.zone;
+  if(C.zone==='under') dec.textContent = t('ตื้นเกินไป — โมเดลง่ายไป แยกกลุ่มได้ไม่ดีพอ ลองเพิ่ม max depth','Too shallow — the model is too simple to separate the classes well. Try raising max depth.');
+  else if(C.zone==='over') dec.textContent = t('ลึกเกินไป — train accuracy สูงลิ่วแต่ holdout accuracy ไม่ตาม (overfit) ลองลด max depth หรือเพิ่ม min samples','Too deep — train accuracy is very high but holdout accuracy lags (overfitting). Try lowering max depth or raising min samples.');
+  else dec.textContent = t('จุดสมดุลดี — ใกล้ความลึกที่ holdout accuracy สูงสุด (depth ≈ '+C.bestD+')','Good balance — near the depth where holdout accuracy peaks (depth ≈ '+C.bestD+').');
+
+  document.getElementById('story').innerHTML = t(
+    '<b>อ่านค่า:</b> ที่ max depth = '+S.depth+' ต้นไม้แบ่งข้อมูลจนได้ <b>'+C.leaves+'</b> ใบ (ความลึกจริง '+C.usedDepth+') ทำ train accuracy <b>'+pct(C.trainAcc)+'</b> แต่ holdout accuracy (ข้อมูลที่ไม่เคยเห็น) ได้แค่ <b>'+pct(C.holdAcc)+'</b>',
+    '<b>Reading it:</b> at max depth = '+S.depth+', the tree splits into <b>'+C.leaves+'</b> leaves (actual depth '+C.usedDepth+'), reaching train accuracy <b>'+pct(C.trainAcc)+'</b> but holdout accuracy (unseen data) of only <b>'+pct(C.holdAcc)+'</b>.');
+
+  document.getElementById('mis').innerHTML = t(
+    '<b>ระวังเข้าใจผิด:</b> Decision Tree ที่ลึกมากจนแบ่งข้อมูล train ได้ถูกต้อง 100% ไม่ได้แปลว่าเป็นโมเดลที่ดี — มันอาจแค่ "จำ" จุดข้อมูล train ไว้ทีละจุด ไม่ได้เรียนรู้รูปแบบที่ generalize ได้ นี่คือเหตุผลที่ต้องดู holdout/validation accuracy คู่กันเสมอ ไม่ใช่ train accuracy อย่างเดียว',
+    '<b>Common misconception:</b> a decision tree deep enough to get 100% train accuracy is not automatically a good model — it may simply be memorizing individual training points rather than learning a pattern that generalizes. This is why holdout/validation accuracy must always be checked alongside train accuracy, never train accuracy alone.');
+
+  drawScatter(C);
+  drawTree(C);
+  drawCurve(C);
+}
+
+/* init */
+setLang('th');
+setTimeout(()=>{ resizeScatter(); resizeTree(); resizeCurve(); }, 50);
+</script>
+</body>
+</html>

@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Confusion Matrix & ROC Curve Simulator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;600;700;800&family=IBM+Plex+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: "Noto Sans Thai","IBM Plex Sans",sans-serif; font-size: 18px; font-weight: 600; background: #f5f5f5; color: #1a1a1a; min-height: 100vh; }
+
+.header { background: #fff; border-bottom: 3px solid #1a1a1a; padding: 16px 32px; display: flex; align-items: center; justify-content: space-between; }
+.header-left { display: flex; align-items: baseline; gap: 14px; }
+.header h1 { font-size: 26px; font-weight: 800; }
+
+.home-btn { text-decoration: none; color: #6c757d; font-size: 15px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border: 1px solid #dee2e6; border-radius: 6px; background: #fff; transition: all 0.2s; flex-shrink: 0; }
+.home-btn:hover { background: #f8f9fa; color: #0d6efd; }
+
+.lang-toggle { display: flex; border: 2px solid #1a1a1a; border-radius: 8px; overflow: hidden; }
+.lang-btn { font-family: inherit; font-size: 16px; font-weight: 700; padding: 6px 16px; border: none; cursor: pointer; background: #fff; color: #888; transition: all .12s; }
+.lang-btn.active { background: #1a1a1a; color: #fff; }
+
+.main { max-width: 1050px; margin: 24px auto; padding: 0 24px; }
+.card { background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 20px; margin-bottom: 16px; }
+.card-title { font-size: 20px; font-weight: 800; margin-bottom: 14px; border-bottom: 1px solid #eee; padding-bottom: 8px; }
+
+.layout { display: grid; grid-template-columns: 320px 1fr; gap: 20px; }
+@media (max-width: 850px) { .layout { grid-template-columns: 1fr; } }
+
+.field-label { font-size: 16px; font-weight: 700; margin-bottom: 6px; }
+.sub-hint { font-size: 13px; font-weight: 600; color: #888; margin-top: 4px; line-height: 1.4; }
+
+.slider-group { margin-bottom: 18px; }
+.slider-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px; }
+.slider-name { font-size: 16px; font-weight: 700; }
+.slider-val { font-size: 22px; font-weight: 800; min-width: 48px; text-align: right; color: #1a1a1a; }
+input[type=range] { width: 100%; cursor: pointer; }
+input[type=range]#sepSlider { accent-color: #6f42c1; }
+input[type=range]#nSlider { accent-color: #0d6efd; }
+input[type=range]#thSlider { accent-color: #1a1a1a; }
+
+canvas { width: 100%; display: block; border-radius: 4px; background: #fff; }
+
+.legend { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 12px; justify-content: center; }
+.legend-item { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; color: #555; }
+.legend-color { width: 16px; height: 12px; border-radius: 3px; }
+
+.cm-wrap { display: grid; grid-template-columns: auto 1fr 1fr; gap: 4px; max-width: 440px; margin: 16px auto 0; }
+.cm-cell { padding: 14px 8px; text-align: center; border-radius: 6px; font-weight: 700; }
+.cm-head { background: transparent; font-size: 13px; color: #888; display: flex; align-items: center; justify-content: center; }
+.cm-corner { background: transparent; }
+.cm-val { font-size: 20px; font-weight: 800; }
+.cm-lbl { font-size: 12px; font-weight: 600; margin-top: 2px; }
+.cm-tp { background: #e8f7f1; color: #0f7a5a; }
+.cm-fp { background: #fdecea; color: #b02a37; }
+.cm-fn { background: #fff3e0; color: #b45c09; }
+.cm-tn { background: #e7f1ff; color: #0a4fb0; }
+.cm-rowhead { writing-mode: vertical-rl; text-align: center; font-size: 13px; color: #888; display:flex; align-items:center; justify-content:center; }
+
+.stat-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-top: 18px; }
+.stat { background: #f8f9fa; border: 1px solid #e0e0e0; border-radius: 6px; padding: 10px 4px; text-align: center; }
+.stat-val { font-size: 19px; font-weight: 800; }
+.stat-lbl { font-size: 11px; font-weight: 600; color: #555; margin-top: 2px; }
+@media (max-width: 600px) { .stat-grid { grid-template-columns: repeat(2, 1fr); } }
+
+.insight { font-size: 16px; font-weight: 600; color: #333; background: #f8f9fa; border-left: 4px solid #1a1a1a; padding: 12px 16px; border-radius: 0 6px 6px 0; margin-top: 16px; line-height: 1.5; }
+.insight.mis { border-left-color: #dc3545; background: #fff6f6; color: #7d2020; }
+.insight b { color: #1a1a1a; }
+.insight.mis b { color: #7d2020; }
+
+.questions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.q-chip { font-size: 15px; font-weight: 600; padding: 6px 14px; border: 1px solid #bbb; border-radius: 20px; color: #444; background: #fafafa; line-height: 1.4; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-left">
+    <a href="index.html" class="home-btn" data-th="← หน้าแรก" data-en="← Home">← Home</a>
+    <h1>Confusion Matrix & ROC</h1>
+  </div>
+  <div class="lang-toggle">
+    <button class="lang-btn active" onclick="setLang('th')">TH</button>
+    <button class="lang-btn" onclick="setLang('en')">EN</button>
+  </div>
+</div>
+
+<div class="main">
+  <div class="layout">
+
+    <!-- LEFT: CONTROLS -->
+    <div>
+      <div class="card">
+        <div class="card-title" data-th="ตั้งค่าพารามิเตอร์" data-en="Adjust Parameters">ตั้งค่าพารามิเตอร์</div>
+
+        <div class="slider-group">
+          <div class="slider-header">
+            <span class="slider-name" data-th="ความแยกกันของคลาส" data-en="Class separability">ความแยกกันของคลาส</span>
+            <span class="slider-val" style="color:#6f42c1;" id="sepVal">2.0</span>
+          </div>
+          <input type="range" id="sepSlider" min="0.3" max="4" step="0.1" value="2.0" oninput="onInput()">
+          <div class="sub-hint" data-th="ยิ่งมาก แปลว่าคะแนนของสองคลาสยิ่งซ้อนทับกันน้อย โมเดลยิ่งแยกง่าย" data-en="Higher = the two classes' scores overlap less, so the model finds it easier to separate them.">ยิ่งมาก แปลว่าคะแนนของสองคลาสยิ่งซ้อนทับกันน้อย โมเดลยิ่งแยกง่าย</div>
+        </div>
+
+        <div class="slider-group">
+          <div class="slider-header">
+            <span class="slider-name" data-th="จำนวนตัวอย่างต่อคลาส N" data-en="Samples per class N">จำนวนตัวอย่างต่อคลาส N</span>
+            <span class="slider-val" style="color:#0d6efd;" id="nVal">200</span>
+          </div>
+          <input type="range" id="nSlider" min="50" max="500" step="10" value="200" oninput="onInput()">
+        </div>
+
+        <div class="slider-group">
+          <div class="slider-header">
+            <span class="slider-name" data-th="เกณฑ์ตัดสิน (threshold)" data-en="Decision threshold">เกณฑ์ตัดสิน (threshold)</span>
+            <span class="slider-val" id="thVal">1.00</span>
+          </div>
+          <input type="range" id="thSlider" min="-4" max="8" step="0.05" value="1.0" oninput="onInput()">
+          <div class="sub-hint" data-th="คะแนนมากกว่าหรือเท่ากับค่านี้ → ทำนายว่าเป็น Positive" data-en="Score ≥ this value → predicted Positive.">คะแนนมากกว่าหรือเท่ากับค่านี้ → ทำนายว่าเป็น Positive</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title" data-th="คำถามชวนคิด" data-en="Discussion Questions">คำถามชวนคิด</div>
+        <div class="questions">
+          <div class="q-chip" data-th="ขยับ threshold ไปทางขวา (เข้มงวดขึ้น) — precision กับ recall เปลี่ยนไปคนละทิศทางไหม?" data-en="Move the threshold right (stricter) — do precision and recall move in opposite directions?">ขยับ threshold ไปทางขวา (เข้มงวดขึ้น) — precision กับ recall เปลี่ยนไปคนละทิศทางไหม?</div>
+          <div class="q-chip" data-th="ทำไม accuracy สูงไม่ได้แปลว่าโมเดลดีเสมอไป โดยเฉพาะเมื่อจำนวนคลาสไม่เท่ากัน?" data-en="Why doesn't high accuracy always mean a good model, especially with imbalanced classes?">ทำไม accuracy สูงไม่ได้แปลว่าโมเดลดีเสมอไป โดยเฉพาะเมื่อจำนวนคลาสไม่เท่ากัน?</div>
+          <div class="q-chip" data-th="AUC ต่างจาก accuracy ที่ threshold เดียวยังไง?" data-en="How does AUC differ from accuracy at a single threshold?">AUC ต่างจาก accuracy ที่ threshold เดียวยังไง?</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT: PLOTS -->
+    <div>
+      <div class="card">
+        <div class="card-title" data-th="การแจกแจงคะแนนของสองคลาส" data-en="Score distributions by class">การแจกแจงคะแนนของสองคลาส</div>
+        <canvas id="cvsDist" height="300"></canvas>
+        <div class="legend">
+          <div class="legend-item"><div class="legend-color" style="background:#0d6efd;"></div><span data-th="Negative จริง" data-en="Actual Negative">Negative จริง</span></div>
+          <div class="legend-item"><div class="legend-color" style="background:#dc3545;"></div><span data-th="Positive จริง" data-en="Actual Positive">Positive จริง</span></div>
+          <div class="legend-item"><div style="width:2px; height:14px; background:#1a1a1a;"></div><span data-th="เกณฑ์ตัดสิน" data-en="Threshold">เกณฑ์ตัดสิน</span></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title" data-th="Confusion Matrix และตัวชี้วัด" data-en="Confusion Matrix and Metrics">Confusion Matrix และตัวชี้วัด</div>
+        <div class="cm-wrap">
+          <div class="cm-corner"></div>
+          <div class="cm-head" data-th="ทำนาย Positive" data-en="Predicted Positive">ทำนาย Positive</div>
+          <div class="cm-head" data-th="ทำนาย Negative" data-en="Predicted Negative">ทำนาย Negative</div>
+
+          <div class="cm-rowhead" data-th="Positive จริง" data-en="Actual Positive">Positive จริง</div>
+          <div class="cm-cell cm-tp"><div class="cm-val" id="tpOut">–</div><div class="cm-lbl">TP</div></div>
+          <div class="cm-cell cm-fn"><div class="cm-val" id="fnOut">–</div><div class="cm-lbl">FN</div></div>
+
+          <div class="cm-rowhead" data-th="Negative จริง" data-en="Actual Negative">Negative จริง</div>
+          <div class="cm-cell cm-fp"><div class="cm-val" id="fpOut">–</div><div class="cm-lbl">FP</div></div>
+          <div class="cm-cell cm-tn"><div class="cm-val" id="tnOut">–</div><div class="cm-lbl">TN</div></div>
+        </div>
+
+        <div class="stat-grid">
+          <div class="stat"><div class="stat-val" id="accOut">–</div><div class="stat-lbl" data-th="Accuracy" data-en="Accuracy">Accuracy</div></div>
+          <div class="stat"><div class="stat-val" id="precOut">–</div><div class="stat-lbl" data-th="Precision" data-en="Precision">Precision</div></div>
+          <div class="stat"><div class="stat-val" id="recOut">–</div><div class="stat-lbl" data-th="Recall (Sensitivity)" data-en="Recall (Sensitivity)">Recall (Sensitivity)</div></div>
+          <div class="stat"><div class="stat-val" id="specOut">–</div><div class="stat-lbl" data-th="Specificity" data-en="Specificity">Specificity</div></div>
+          <div class="stat"><div class="stat-val" id="f1Out">–</div><div class="stat-lbl">F1-score</div></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title" data-th="ROC Curve" data-en="ROC Curve">ROC Curve</div>
+        <canvas id="cvsRoc" height="320"></canvas>
+        <div class="legend">
+          <div class="legend-item"><div class="legend-color" style="background:#0d6efd;"></div><span data-th="ROC curve ของโมเดล" data-en="Model's ROC curve">ROC curve ของโมเดล</span></div>
+          <div class="legend-item"><div style="width:12px; height:0; border-top:2px dashed #adb5bd;"></div><span data-th="โมเดลสุ่มเดา (AUC = 0.5)" data-en="Random guessing (AUC = 0.5)">โมเดลสุ่มเดา (AUC = 0.5)</span></div>
+          <div class="legend-item"><div style="width:10px; height:10px; background:#1a1a1a; border-radius:50%;"></div><span data-th="จุดที่ threshold ปัจจุบัน" data-en="Current threshold's point">จุดที่ threshold ปัจจุบัน</span></div>
+        </div>
+        <div class="stat-grid" style="grid-template-columns: repeat(3,1fr);">
+          <div class="stat" style="border-bottom:4px solid #0d6efd;"><div class="stat-val" style="color:#0d6efd;" id="aucOut">–</div><div class="stat-lbl">AUC</div></div>
+          <div class="stat"><div class="stat-val" id="fprOut">–</div><div class="stat-lbl">FPR</div></div>
+          <div class="stat"><div class="stat-val" id="tprOut">–</div><div class="stat-lbl">TPR</div></div>
+        </div>
+        <div class="insight" id="story"></div>
+        <div class="insight mis" id="mis"></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+/* ---------- language ---------- */
+var currentLang = 'th';
+function t(th, en){ return currentLang === 'en' ? en : th; }
+function setLang(lang){
+  currentLang = lang;
+  document.querySelectorAll('.lang-btn').forEach(b => b.classList.toggle('active', b.textContent.trim().toLowerCase() === lang));
+  document.querySelectorAll('[data-th]').forEach(el => { var v = el.getAttribute('data-'+lang); if(v!==null) el.innerHTML = v; });
+  render();
+}
+
+/* ---------- normal distribution math ---------- */
+function erf(x){ const tt=1/(1+0.3275911*Math.abs(x));
+  const y=1-(((((1.061405429*tt-1.453152027)*tt)+1.421413741)*tt-0.284496736)*tt+0.254829592)*tt*Math.exp(-x*x); return x>=0?y:-y; }
+const SQRT2=Math.SQRT2, SQRT2PI=Math.sqrt(2*Math.PI);
+function normCdf(z){ return 0.5*(1+erf(z/SQRT2)); }
+function normPdf(z){ return Math.exp(-z*z/2)/SQRT2PI; }
+
+/* class score model: Negative ~ N(0,1), Positive ~ N(sep,1) */
+function TPR(th,sep){ return 1-normCdf(th-sep); }   // recall / sensitivity
+function FPR(th){ return 1-normCdf(th); }
+function TNR(th){ return normCdf(th); }             // specificity
+function FNR(th,sep){ return normCdf(th-sep); }
+
+/* ---------- state ---------- */
+const S = { sep:2.0, n:200, th:1.0 };
+
+function onInput(){
+  S.sep=parseFloat(document.getElementById('sepSlider').value);
+  S.n=parseInt(document.getElementById('nSlider').value);
+  const thSlider=document.getElementById('thSlider');
+  thSlider.min=(-4).toFixed(1); thSlider.max=(S.sep+4).toFixed(1);
+  S.th=Math.min(parseFloat(thSlider.value), S.sep+4);
+  thSlider.value=S.th;
+  render();
+}
+
+/* ---------- compute ---------- */
+function rocPoints(sep){
+  const pts=[];
+  for(let th=-6; th<=sep+6; th+=0.03){ pts.push({fpr:FPR(th), tpr:TPR(th,sep)}); }
+  pts.sort((a,b)=>a.fpr-b.fpr);
+  return pts;
+}
+function aucOf(pts){
+  let area=0;
+  for(let i=1;i<pts.length;i++){ area += (pts[i].fpr-pts[i-1].fpr)*(pts[i].tpr+pts[i-1].tpr)/2; }
+  return area;
+}
+function compute(){
+  const {sep,n,th}=S;
+  const tp=n*TPR(th,sep), fn=n*FNR(th,sep), fp=n*FPR(th), tn=n*TNR(th);
+  const accuracy=(tp+tn)/(2*n);
+  const precision = (tp+fp)>0 ? tp/(tp+fp) : 0;
+  const recall = TPR(th,sep);
+  const specificity = TNR(th);
+  const f1 = (precision+recall)>0 ? 2*precision*recall/(precision+recall) : 0;
+  const roc = rocPoints(sep);
+  const auc = aucOf(roc);
+  return {sep,n,th,tp,fn,fp,tn,accuracy,precision,recall,specificity,f1,roc,auc,fpr:FPR(th),tpr:TPR(th,sep)};
+}
+
+/* ---------- distribution canvas ---------- */
+const cvsD=document.getElementById('cvsDist'), ctxD=cvsD.getContext('2d');
+function resizeDist(){
+  const W=cvsD.parentElement.clientWidth-40, H=300;
+  cvsD.style.width=W+'px'; cvsD.style.height=H+'px';
+  cvsD.width=W*window.devicePixelRatio; cvsD.height=H*window.devicePixelRatio;
+  ctxD.setTransform(1,0,0,1,0,0); ctxD.scale(window.devicePixelRatio,window.devicePixelRatio);
+  render();
+}
+window.addEventListener('resize', resizeDist);
+
+function drawDist(C){
+  const W=cvsD.offsetWidth, H=cvsD.offsetHeight;
+  ctxD.clearRect(0,0,W,H);
+  const pad={top:16,bottom:30,left:20,right:20};
+  const cw=W-pad.left-pad.right, chH=H-pad.top-pad.bottom;
+  const xmin=-4, xmax=C.sep+4;
+  const N=240;
+  let ymax=0;
+  const negY=[], posY=[];
+  for(let i=0;i<=N;i++){
+    const x=xmin+(xmax-xmin)*i/N;
+    const ny=normPdf(x), py=normPdf(x-C.sep);
+    negY.push(ny); posY.push(py);
+    if(ny>ymax) ymax=ny; if(py>ymax) ymax=py;
+  }
+  ymax*=1.15;
+  const X = x => pad.left+(x-xmin)/(xmax-xmin)*cw;
+  const Y = y => pad.top+chH-(y/ymax)*chH;
+
+  // ticks
+  ctxD.font='12px "IBM Plex Sans",sans-serif'; ctxD.textAlign='center'; ctxD.fillStyle='#999';
+  const step = C.sep>2 ? 2:1;
+  for(let v=Math.ceil(xmin); v<=xmax; v+=step){
+    const px=X(v);
+    ctxD.strokeStyle='#f0f0f0'; ctxD.lineWidth=1;
+    ctxD.beginPath(); ctxD.moveTo(px,pad.top); ctxD.lineTo(px,pad.top+chH); ctxD.stroke();
+    ctxD.fillText(v, px, pad.top+chH+16);
+  }
+
+  function fillUnder(ys, xa, xb, color){
+    ctxD.beginPath();
+    let started=false;
+    for(let i=0;i<=N;i++){
+      const x=xmin+(xmax-xmin)*i/N;
+      if(x<xa || x>xb) continue;
+      const px=X(x), py=Y(ys[i]);
+      if(!started){ ctxD.moveTo(X(Math.max(xa,xmin)),Y(0)); ctxD.lineTo(px,py); started=true; }
+      else ctxD.lineTo(px,py);
+    }
+    ctxD.lineTo(X(Math.min(xb,xmax)),Y(0));
+    ctxD.closePath(); ctxD.fillStyle=color; ctxD.fill();
+  }
+  // negative: left of th = TN, right of th = FP
+  fillUnder(negY, xmin, C.th, 'rgba(13,110,253,0.30)');
+  fillUnder(negY, C.th, xmax, 'rgba(220,53,69,0.30)');
+  // positive: left of th = FN, right of th = TP
+  fillUnder(posY, xmin, C.th, 'rgba(253,126,20,0.30)');
+  fillUnder(posY, C.th, xmax, 'rgba(32,201,151,0.30)');
+
+  // outlines
+  function stroke(ys,color){
+    ctxD.beginPath();
+    for(let i=0;i<=N;i++){ const x=xmin+(xmax-xmin)*i/N, px=X(x), py=Y(ys[i]); i?ctxD.lineTo(px,py):ctxD.moveTo(px,py); }
+    ctxD.strokeStyle=color; ctxD.lineWidth=2.2; ctxD.stroke();
+  }
+  stroke(negY,'#0d6efd'); stroke(posY,'#dc3545');
+
+  // baseline
+  ctxD.strokeStyle='#888'; ctxD.lineWidth=1;
+  ctxD.beginPath(); ctxD.moveTo(pad.left,Y(0)); ctxD.lineTo(W-pad.right,Y(0)); ctxD.stroke();
+
+  // threshold line
+  if(C.th>=xmin && C.th<=xmax){
+    const px=X(C.th);
+    ctxD.strokeStyle='#1a1a1a'; ctxD.lineWidth=2;
+    ctxD.beginPath(); ctxD.moveTo(px,pad.top); ctxD.lineTo(px,pad.top+chH); ctxD.stroke();
+  }
+}
+
+/* ---------- ROC canvas ---------- */
+const cvsR=document.getElementById('cvsRoc'), ctxR=cvsR.getContext('2d');
+function resizeRoc(){
+  const W=cvsR.parentElement.clientWidth-40, H=W>420?340:W;
+  cvsR.style.width=W+'px'; cvsR.style.height=H+'px';
+  cvsR.width=W*window.devicePixelRatio; cvsR.height=H*window.devicePixelRatio;
+  ctxR.setTransform(1,0,0,1,0,0); ctxR.scale(window.devicePixelRatio,window.devicePixelRatio);
+  render();
+}
+window.addEventListener('resize', resizeRoc);
+
+function drawRoc(C){
+  const W=cvsR.offsetWidth, H=cvsR.offsetHeight;
+  ctxR.clearRect(0,0,W,H);
+  const pad={top:14,bottom:30,left:38,right:14};
+  const size=Math.min(W-pad.left-pad.right, H-pad.top-pad.bottom);
+  const ox=pad.left, oy=pad.top;
+  const X = fpr => ox+fpr*size;
+  const Y = tpr => oy+size-tpr*size;
+
+  ctxR.strokeStyle='#1a1a1a'; ctxR.lineWidth=1.5; ctxR.strokeRect(ox,oy,size,size);
+  ctxR.font='12px "IBM Plex Sans",sans-serif'; ctxR.fillStyle='#999'; ctxR.textAlign='center';
+  [0,0.5,1].forEach(v=>{ ctxR.fillText(v, X(v), oy+size+16); ctxR.fillText(v, ox-16, Y(v)+4); });
+  ctxR.fillText('FPR', ox+size/2, oy+size+28);
+  ctxR.save(); ctxR.translate(ox-30, oy+size/2); ctxR.rotate(-Math.PI/2); ctxR.fillText('TPR', 0, 0); ctxR.restore();
+
+  // diagonal reference
+  ctxR.setLineDash([5,4]); ctxR.strokeStyle='#adb5bd'; ctxR.lineWidth=1.5;
+  ctxR.beginPath(); ctxR.moveTo(X(0),Y(0)); ctxR.lineTo(X(1),Y(1)); ctxR.stroke();
+  ctxR.setLineDash([]);
+
+  // ROC curve
+  ctxR.beginPath();
+  C.roc.forEach((p,i)=>{ const px=X(p.fpr), py=Y(p.tpr); i?ctxR.lineTo(px,py):ctxR.moveTo(px,py); });
+  ctxR.strokeStyle='#0d6efd'; ctxR.lineWidth=2.5; ctxR.stroke();
+
+  // fill under curve (AUC)
+  ctxR.beginPath(); ctxR.moveTo(X(0),Y(0));
+  C.roc.forEach(p=>{ ctxR.lineTo(X(p.fpr),Y(p.tpr)); });
+  ctxR.lineTo(X(1),Y(0)); ctxR.closePath();
+  ctxR.fillStyle='rgba(13,110,253,0.08)'; ctxR.fill();
+
+  // current point
+  ctxR.beginPath(); ctxR.arc(X(C.fpr),Y(C.tpr),6,0,Math.PI*2);
+  ctxR.fillStyle='#1a1a1a'; ctxR.fill(); ctxR.strokeStyle='#fff'; ctxR.lineWidth=1.5; ctxR.stroke();
+}
+
+/* ---------- text ---------- */
+function pct(v){ return (v*100).toFixed(1)+'%'; }
+function render(){
+  const C=compute();
+
+  document.getElementById('sepVal').textContent=S.sep.toFixed(1);
+  document.getElementById('nVal').textContent=S.n;
+  document.getElementById('thVal').textContent=S.th.toFixed(2);
+
+  document.getElementById('tpOut').textContent=Math.round(C.tp);
+  document.getElementById('fnOut').textContent=Math.round(C.fn);
+  document.getElementById('fpOut').textContent=Math.round(C.fp);
+  document.getElementById('tnOut').textContent=Math.round(C.tn);
+
+  document.getElementById('accOut').textContent=pct(C.accuracy);
+  document.getElementById('precOut').textContent=pct(C.precision);
+  document.getElementById('recOut').textContent=pct(C.recall);
+  document.getElementById('specOut').textContent=pct(C.specificity);
+  document.getElementById('f1Out').textContent=C.f1.toFixed(3);
+
+  document.getElementById('aucOut').textContent=C.auc.toFixed(3);
+  document.getElementById('fprOut').textContent=pct(C.fpr);
+  document.getElementById('tprOut').textContent=pct(C.tpr);
+
+  document.getElementById('story').innerHTML = t(
+    '<b>อ่านค่า:</b> ที่ threshold = '+S.th.toFixed(2)+' โมเดลจับ Positive ได้ถูก (TP) <b>'+Math.round(C.tp)+'</b> ราย แต่พลาดไป (FN) <b>'+Math.round(C.fn)+'</b> ราย และทายผิดจาก Negative (FP) <b>'+Math.round(C.fp)+'</b> ราย — AUC = <b>'+C.auc.toFixed(3)+'</b> คือพื้นที่ใต้ ROC ทั้งเส้น ไม่ขึ้นกับว่าเลือก threshold ไหน',
+    '<b>Reading it:</b> at threshold = '+S.th.toFixed(2)+', the model correctly catches (TP) <b>'+Math.round(C.tp)+'</b> positives, misses (FN) <b>'+Math.round(C.fn)+'</b>, and wrongly flags (FP) <b>'+Math.round(C.fp)+'</b> negatives — AUC = <b>'+C.auc.toFixed(3)+'</b> is the area under the whole ROC curve, independent of which threshold you pick.');
+
+  document.getElementById('mis').innerHTML = t(
+    '<b>ระวังเข้าใจผิด:</b> Precision และ Recall มักแลกกัน (trade-off) — เข้มงวดขึ้น (threshold สูงขึ้น) จะได้ precision ดีขึ้นแต่ recall แย่ลงเสมอ ไม่มี threshold เดียวที่ดีที่สุดสำหรับทุกสถานการณ์ ต้องเลือกตามว่าการพลาด (FN) หรือการแจ้งเตือนเท็จ (FP) อันไหนสร้างความเสียหายมากกว่า',
+    "<b>Common misconception:</b> precision and recall usually trade off — a stricter (higher) threshold always improves precision at the cost of recall. There is no single best threshold for every situation; the right choice depends on whether a miss (FN) or a false alarm (FP) is more costly.");
+
+  drawDist(C);
+  drawRoc(C);
+}
+
+/* init */
+onInput();
+setLang('th');
+setTimeout(()=>{ resizeDist(); resizeRoc(); }, 50);
+</script>
+</body>
+</html>

@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>K-Fold Cross-Validation Simulator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;600;700;800&family=IBM+Plex+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: "Noto Sans Thai","IBM Plex Sans",sans-serif; font-size: 18px; font-weight: 600; background: #f5f5f5; color: #1a1a1a; min-height: 100vh; }
+
+.header { background: #fff; border-bottom: 3px solid #1a1a1a; padding: 16px 32px; display: flex; align-items: center; justify-content: space-between; }
+.header-left { display: flex; align-items: baseline; gap: 14px; }
+.header h1 { font-size: 28px; font-weight: 800; }
+
+.home-btn { text-decoration: none; color: #6c757d; font-size: 15px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border: 1px solid #dee2e6; border-radius: 6px; background: #fff; transition: all 0.2s; flex-shrink: 0; }
+.home-btn:hover { background: #f8f9fa; color: #0d6efd; }
+
+.lang-toggle { display: flex; border: 2px solid #1a1a1a; border-radius: 8px; overflow: hidden; }
+.lang-btn { font-family: inherit; font-size: 16px; font-weight: 700; padding: 6px 16px; border: none; cursor: pointer; background: #fff; color: #888; transition: all .12s; }
+.lang-btn.active { background: #1a1a1a; color: #fff; }
+
+.main { max-width: 1000px; margin: 24px auto; padding: 0 24px; }
+.card { background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 20px; margin-bottom: 16px; }
+.card-title { font-size: 20px; font-weight: 800; margin-bottom: 14px; border-bottom: 1px solid #eee; padding-bottom: 8px; }
+
+.layout { display: grid; grid-template-columns: 340px 1fr; gap: 20px; }
+@media (max-width: 850px) { .layout { grid-template-columns: 1fr; } }
+
+.seg { display: flex; border: 2px solid #1a1a1a; border-radius: 8px; overflow: hidden; margin-bottom: 6px; }
+.seg button { flex: 1; font-family: inherit; font-size: 14px; font-weight: 700; padding: 8px 4px; border: none; border-right: 2px solid #1a1a1a; cursor: pointer; background: #fff; color: #888; transition: all .12s; }
+.seg button:last-child { border-right: none; }
+.seg button.active { background: #1a1a1a; color: #fff; }
+.field-label { font-size: 16px; font-weight: 700; margin-bottom: 6px; }
+.sub-hint { font-size: 13px; font-weight: 600; color: #888; margin-top: 4px; line-height: 1.4; }
+
+.slider-group { margin-bottom: 18px; }
+.slider-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px; }
+.slider-name { font-size: 16px; font-weight: 700; }
+.slider-val { font-size: 22px; font-weight: 800; min-width: 48px; text-align: right; color: #1a1a1a; }
+input[type=range] { width: 100%; cursor: pointer; }
+input[type=range]#nSlider { accent-color: #0d6efd; }
+input[type=range]#kSlider { accent-color: #6f42c1; }
+input[type=range]#cSlider { accent-color: #1a1a1a; }
+
+.resample-btn { width: 100%; font-family: inherit; font-size: 15px; font-weight: 700; padding: 10px; border: 2px solid #1a1a1a; border-radius: 8px; background: #fff; cursor: pointer; margin-bottom: 4px; transition: all .12s; }
+.resample-btn:hover { background: #1a1a1a; color: #fff; }
+
+.fold-nav { display: flex; align-items: center; gap: 10px; justify-content: center; margin-top: 8px; }
+.fold-nav button { font-family: inherit; font-size: 14px; font-weight: 700; padding: 6px 14px; border: 1px solid #1a1a1a; border-radius: 6px; background: #fff; cursor: pointer; }
+.fold-nav button:hover { background: #f0f0f0; }
+.fold-nav span { font-size: 15px; font-weight: 700; min-width: 110px; text-align: center; }
+
+canvas { width: 100%; display: block; border-radius: 4px; background: #fff; }
+
+.stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 16px; }
+.stat { background: #f8f9fa; border: 1px solid #e0e0e0; border-radius: 6px; padding: 10px 6px; text-align: center; }
+.stat-val { font-size: 20px; font-weight: 800; }
+.stat-lbl { font-size: 12px; font-weight: 600; color: #555; margin-top: 2px; }
+@media (max-width: 500px) { .stat-grid { grid-template-columns: repeat(2, 1fr); } }
+
+.legend { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 12px; justify-content: center; }
+.legend-item { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; color: #555; }
+.legend-color { width: 16px; height: 12px; border-radius: 3px; }
+
+.decision { font-size: 17px; font-weight: 800; padding: 12px 16px; border-radius: 6px; margin-top: 16px; text-align: center; border: 2px solid; }
+.decision.under { background: #e7f1ff; border-color: #0d6efd; color: #0a4fb0; }
+.decision.good { background: #e8f7f1; border-color: #20c997; color: #0f7a5a; }
+.decision.over { background: #fdecea; border-color: #dc3545; color: #b02a37; }
+
+.insight { font-size: 16px; font-weight: 600; color: #333; background: #f8f9fa; border-left: 4px solid #1a1a1a; padding: 12px 16px; border-radius: 0 6px 6px 0; margin-top: 16px; line-height: 1.5; }
+.insight.mis { border-left-color: #dc3545; background: #fff6f6; color: #7d2020; }
+.insight b { color: #1a1a1a; }
+.insight.mis b { color: #7d2020; }
+
+.questions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.q-chip { font-size: 15px; font-weight: 600; padding: 6px 14px; border: 1px solid #bbb; border-radius: 20px; color: #444; background: #fafafa; line-height: 1.4; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-left">
+    <a href="index.html" class="home-btn" data-th="← หน้าแรก" data-en="← Home">← Home</a>
+    <h1>K-Fold Cross-Validation</h1>
+  </div>
+  <div class="lang-toggle">
+    <button class="lang-btn active" onclick="setLang('th')">TH</button>
+    <button class="lang-btn" onclick="setLang('en')">EN</button>
+  </div>
+</div>
+
+<div class="main">
+  <div class="layout">
+
+    <!-- LEFT: CONTROLS -->
+    <div>
+      <div class="card">
+        <div class="card-title" data-th="ตั้งค่าพารามิเตอร์" data-en="Adjust Parameters">ตั้งค่าพารามิเตอร์</div>
+
+        <div class="slider-group">
+          <div class="slider-header">
+            <span class="slider-name" data-th="จำนวนข้อมูลทั้งหมด N" data-en="Total samples N">จำนวนข้อมูลทั้งหมด N</span>
+            <span class="slider-val" style="color:#0d6efd;" id="nVal">60</span>
+          </div>
+          <input type="range" id="nSlider" min="20" max="200" step="5" value="60" oninput="onInput()">
+          <div class="sub-hint" data-th="N มากขึ้น → ประมาณการณ์เสถียรขึ้น และรับโมเดลซับซ้อนได้มากขึ้นก่อนจะ overfit" data-en="More N → more stable estimates, and can support a more complex model before overfitting.">N มากขึ้น → ประมาณการณ์เสถียรขึ้น และรับโมเดลซับซ้อนได้มากขึ้นก่อนจะ overfit</div>
+        </div>
+
+        <div class="slider-group">
+          <div class="slider-header">
+            <span class="slider-name" data-th="จำนวนโฟลด์ k" data-en="Number of folds k">จำนวนโฟลด์ k</span>
+            <span class="slider-val" style="color:#6f42c1;" id="kVal">5</span>
+          </div>
+          <input type="range" id="kSlider" min="2" max="10" step="1" value="5" oninput="onInput()">
+          <div class="sub-hint" id="kHint"></div>
+        </div>
+
+        <div class="slider-group">
+          <div class="slider-header">
+            <span class="slider-name" id="cLabel">ความซับซ้อนของโมเดล</span>
+            <span class="slider-val" id="cVal">5</span>
+          </div>
+          <input type="range" id="cSlider" min="1" max="15" step="1" value="5" oninput="onInput()">
+          <div class="sub-hint" id="cHint"></div>
+        </div>
+
+        <button class="resample-btn" onclick="resample()" data-th="🎲 สุ่มการแบ่งข้อมูลใหม่" data-en="🎲 Resample the split">🎲 สุ่มการแบ่งข้อมูลใหม่</button>
+        <div class="sub-hint" data-th="กดซ้ำ ๆ เพื่อดูว่าค่าเฉลี่ย k-fold นิ่งกว่าค่าจาก split เดียวแค่ไหน" data-en="Click repeatedly to see how much steadier the k-fold average is than a single split.">กดซ้ำ ๆ เพื่อดูว่าค่าเฉลี่ย k-fold นิ่งกว่าค่าจาก split เดียวแค่ไหน</div>
+      </div>
+
+      <div class="card">
+        <div class="card-title" data-th="คำถามชวนคิด" data-en="Discussion Questions">คำถามชวนคิด</div>
+        <div class="questions">
+          <div class="q-chip" data-th="ทำไม train error ลดลงเรื่อย ๆ เมื่อโมเดลซับซ้อนขึ้น แต่ validation error กลับเพิ่มขึ้น?" data-en="Why does train error keep falling as the model gets more complex, while validation error rises?">ทำไม train error ลดลงเรื่อย ๆ เมื่อโมเดลซับซ้อนขึ้น แต่ validation error กลับเพิ่มขึ้น?</div>
+          <div class="q-chip" data-th="ถ้าเพิ่ม k จาก 2 เป็น 10 ความกว้างของแถบ std เปลี่ยนไหม แล้วค่าเฉลี่ยล่ะ?" data-en="If you raise k from 2 to 10, does the spread across folds change? What about the mean?">ถ้าเพิ่ม k จาก 2 เป็น 10 ความกว้างของแถบ std เปลี่ยนไหม แล้วค่าเฉลี่ยล่ะ?</div>
+          <div class="q-chip" data-th="ใช้ train/test split ครั้งเดียวมีความเสี่ยงอะไรเทียบกับ k-fold CV?" data-en="What's the risk of a single train/test split compared to k-fold CV?">ใช้ train/test split ครั้งเดียวมีความเสี่ยงอะไรเทียบกับ k-fold CV?</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT: PLOTS -->
+    <div>
+      <div class="card">
+        <div class="card-title" data-th="การแบ่งข้อมูลเป็น K โฟลด์" data-en="Splitting the data into K folds">การแบ่งข้อมูลเป็น K โฟลด์</div>
+        <canvas id="cvsFold" height="260"></canvas>
+        <div class="fold-nav">
+          <button onclick="stepFold(-1)">‹ <span data-th="ก่อนหน้า" data-en="Prev"></span></button>
+          <span id="foldLabel"></span>
+          <button onclick="stepFold(1)"><span data-th="ถัดไป" data-en="Next"></span> ›</button>
+        </div>
+        <div class="legend">
+          <div class="legend-item"><div class="legend-color" style="background:#0d6efd;"></div><span data-th="ใช้เทรน (training)" data-en="Training fold">ใช้เทรน (training)</span></div>
+          <div class="legend-item"><div class="legend-color" style="background:#dc3545;"></div><span data-th="ใช้ทดสอบ (validation)" data-en="Validation fold">ใช้ทดสอบ (validation)</span></div>
+          <div class="legend-item"><div style="width:12px; height:0; border-top:2px dashed #6f42c1;"></div><span data-th="ค่าเฉลี่ย k-fold" data-en="k-fold mean">ค่าเฉลี่ย k-fold</span></div>
+          <div class="legend-item"><div style="width:10px; height:10px; background:#adb5bd; transform:rotate(45deg);"></div><span data-th="ถ้าใช้ split เดียว" data-en="If only 1 split">ถ้าใช้ split เดียว</span></div>
+        </div>
+        <div class="stat-grid">
+          <div class="stat" style="border-bottom: 4px solid #6f42c1;"><div class="stat-val" style="color:#6f42c1;" id="cvMeanOut">–</div><div class="stat-lbl" data-th="ค่าเฉลี่ย k-fold" data-en="k-fold mean">ค่าเฉลี่ย k-fold</div></div>
+          <div class="stat" style="border-bottom: 4px solid #6f42c1;"><div class="stat-val" id="cvStdOut">–</div><div class="stat-lbl" data-th="std ระหว่างโฟลด์" data-en="std across folds">std ระหว่างโฟลด์</div></div>
+          <div class="stat" style="border-bottom: 4px solid #adb5bd;"><div class="stat-val" style="color:#6c757d;" id="singleOut">–</div><div class="stat-lbl" data-th="ถ้าใช้ split เดียว" data-en="single split">ถ้าใช้ split เดียว</div></div>
+          <div class="stat" style="border-bottom: 4px solid #0d6efd;"><div class="stat-val" style="color:#0d6efd;" id="trainOut">–</div><div class="stat-lbl" data-th="train error" data-en="train error">train error</div></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title" data-th="Error เทียบกับความซับซ้อนของโมเดล" data-en="Error vs. Model Complexity">Error เทียบกับความซับซ้อนของโมเดล</div>
+        <canvas id="cvsCurve" height="300"></canvas>
+        <div class="legend">
+          <div class="legend-item"><div class="legend-color" style="background:#0d6efd;"></div><span data-th="Train error" data-en="Train error">Train error</span></div>
+          <div class="legend-item"><div class="legend-color" style="background:rgba(220,53,69,0.6);"></div><span data-th="Validation error (± std)" data-en="Validation error (± std)">Validation error (± std)</span></div>
+          <div class="legend-item"><div style="width:12px; height:0; border-top:2px dashed #20c997;"></div><span data-th="ความซับซ้อนที่เหมาะสม" data-en="Optimal complexity">ความซับซ้อนที่เหมาะสม</span></div>
+        </div>
+        <div class="decision" id="decision"></div>
+        <div class="insight" id="story"></div>
+        <div class="insight mis" id="mis"></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+/* ---------- language ---------- */
+var currentLang = 'th';
+function t(th, en){ return currentLang === 'en' ? en : th; }
+function setLang(lang){
+  currentLang = lang;
+  document.querySelectorAll('.lang-btn').forEach(b => b.classList.toggle('active', b.textContent.trim().toLowerCase() === lang));
+  document.querySelectorAll('[data-th]').forEach(el => { var v = el.getAttribute('data-'+lang); if(v!==null) el.innerHTML = v; });
+  render();
+}
+
+/* ---------- seeded pseudo-random ---------- */
+function seededRand(seed){ const x = Math.sin(seed*12.9898)*43758.5453; return x - Math.floor(x); }
+
+/* ---------- toy bias-variance model ---------- */
+function biasSq(c){ return 9/(c+1); }
+function varTerm(c,N){ return (c*c/N)*3; }
+function valMean(c,N){ return biasSq(c) + varTerm(c,N) + 1.0; }
+function trainMean(c){ return Math.max(0.15, 7*Math.exp(-c/3.2)) + 0.25; }
+function stdFold(c,N){ return Math.sqrt(varTerm(c,N))*1.4; }
+
+function optimalComplexity(N){
+  let best=1, bestV=Infinity;
+  for(let c=1; c<=15; c+=0.5){ const v=valMean(c,N); if(v<bestV){bestV=v; best=c;} }
+  return best;
+}
+
+function foldErrors(c,N,k,seed){
+  const base=valMean(c,N), sd=stdFold(c,N), arr=[];
+  for(let i=0;i<k;i++){
+    const r = seededRand(seed*13.7 + i*31.41 + c*2.71 + N*0.019);
+    const noise = (r-0.5)*2*sd;
+    arr.push(Math.max(0.1, base+noise));
+  }
+  return arr;
+}
+function singleSplitError(c,N,seed){
+  const base=valMean(c,N), sd=stdFold(c,N);
+  const r = seededRand(seed*99.13 + c*4.41 + N*0.053 + 7.77);
+  return Math.max(0.1, base + (r-0.5)*2*sd);
+}
+function mean(arr){ return arr.reduce((a,b)=>a+b,0)/arr.length; }
+function std(arr){ const m=mean(arr); return Math.sqrt(mean(arr.map(v=>(v-m)*(v-m)))); }
+
+/* ---------- state ---------- */
+const S = { N:60, k:5, c:5, seed:1, foldIdx:0 };
+
+function onInput(){
+  S.N=parseInt(document.getElementById('nSlider').value);
+  S.k=parseInt(document.getElementById('kSlider').value);
+  S.c=parseInt(document.getElementById('cSlider').value);
+  if(S.foldIdx>=S.k) S.foldIdx=0;
+  render();
+}
+function resample(){ S.seed = S.seed + 1 + Math.floor(Math.random()*50); render(); }
+function stepFold(d){ S.foldIdx = (S.foldIdx + d + S.k) % S.k; render(); }
+
+/* ---------- compute ---------- */
+function compute(){
+  const c=S.c, N=S.N, k=S.k, seed=S.seed;
+  const folds = foldErrors(c,N,k,seed);
+  const cvMean = mean(folds);
+  const cvStd = std(folds);
+  const single = singleSplitError(c,N,seed);
+  const train = trainMean(c);
+  const optC = optimalComplexity(N);
+  const diff = c - optC;
+  let zone = 'good';
+  if(diff <= -2.5) zone='under'; else if(diff>=2.5) zone='over';
+  return {c,N,k,seed,folds,cvMean,cvStd,single,train,optC,zone};
+}
+
+/* ---------- fold + bar canvas ---------- */
+const cvsFold=document.getElementById('cvsFold'), ctxF=cvsFold.getContext('2d');
+function resizeFold(){
+  const W=cvsFold.parentElement.clientWidth-40, H=260;
+  cvsFold.style.width=W+'px'; cvsFold.style.height=H+'px';
+  cvsFold.width=W*window.devicePixelRatio; cvsFold.height=H*window.devicePixelRatio;
+  ctxF.setTransform(1,0,0,1,0,0); ctxF.scale(window.devicePixelRatio,window.devicePixelRatio);
+  render();
+}
+window.addEventListener('resize', resizeFold);
+
+function drawFold(C){
+  const W=cvsFold.offsetWidth, H=cvsFold.offsetHeight;
+  ctxF.clearRect(0,0,W,H);
+  const padX=10;
+
+  // -- top strip: N samples split into k contiguous blocks --
+  const stripY=8, stripH=34, stripW=W-padX*2;
+  for(let f=0; f<C.k; f++){
+    const x0 = padX + stripW*f/C.k, x1 = padX + stripW*(f+1)/C.k;
+    ctxF.fillStyle = (f===S.foldIdx) ? '#dc3545' : '#0d6efd';
+    ctxF.globalAlpha = (f===S.foldIdx) ? 0.85 : 0.30;
+    ctxF.fillRect(x0+1, stripY, (x1-x0)-2, stripH);
+    ctxF.globalAlpha = 1;
+  }
+  ctxF.strokeStyle='#1a1a1a'; ctxF.lineWidth=1.5; ctxF.strokeRect(padX, stripY, stripW, stripH);
+  ctxF.fillStyle='#555'; ctxF.font='12px "IBM Plex Sans",sans-serif'; ctxF.textAlign='center';
+  ctxF.fillText('N = '+C.N+' '+t('ตัวอย่าง','samples'), W/2, stripY+stripH+16);
+
+  // -- bottom: bar chart of per-fold validation error --
+  const chartTop=76, chartBot=H-14, chartH=chartBot-chartTop;
+  const allVals = C.folds.concat([C.single]);
+  const ymax = Math.max(...allVals, C.cvMean)*1.25;
+  const Y = v => chartBot - (v/ymax)*chartH;
+  const nBars = C.k+1; // +1 for the single-split diamond slot
+  const bw = stripW/nBars;
+
+  // gridline at 0
+  ctxF.strokeStyle='#eee'; ctxF.lineWidth=1;
+  ctxF.beginPath(); ctxF.moveTo(padX, chartBot); ctxF.lineTo(padX+stripW, chartBot); ctxF.stroke();
+
+  // cv mean dashed line
+  ctxF.setLineDash([5,4]); ctxF.strokeStyle='#6f42c1'; ctxF.lineWidth=1.5;
+  ctxF.beginPath(); ctxF.moveTo(padX, Y(C.cvMean)); ctxF.lineTo(padX+stripW-bw, Y(C.cvMean)); ctxF.stroke();
+  ctxF.setLineDash([]);
+
+  for(let f=0; f<C.k; f++){
+    const x=padX+bw*f+bw*0.2, w=bw*0.6, y=Y(C.folds[f]);
+    ctxF.fillStyle = (f===S.foldIdx) ? '#dc3545' : '#0d6efd';
+    ctxF.globalAlpha = (f===S.foldIdx) ? 0.9 : 0.55;
+    ctxF.fillRect(x, y, w, chartBot-y);
+    ctxF.globalAlpha=1;
+    ctxF.fillStyle='#888'; ctxF.font='11px "IBM Plex Sans",sans-serif'; ctxF.textAlign='center';
+    ctxF.fillText((f+1), x+w/2, chartBot+13);
+  }
+  // single-split diamond marker in its own slot
+  const sx = padX+bw*C.k+bw/2, sy=Y(C.single);
+  ctxF.fillStyle='#adb5bd';
+  ctxF.beginPath();
+  ctxF.moveTo(sx, sy-7); ctxF.lineTo(sx+7, sy); ctxF.lineTo(sx, sy+7); ctxF.lineTo(sx-7, sy); ctxF.closePath();
+  ctxF.fill();
+  ctxF.fillStyle='#888'; ctxF.fillText('1x', sx, chartBot+13);
+}
+
+/* ---------- complexity curve canvas ---------- */
+const cvsCurve=document.getElementById('cvsCurve'), ctxC=cvsCurve.getContext('2d');
+function resizeCurve(){
+  const W=cvsCurve.parentElement.clientWidth-40, H=300;
+  cvsCurve.style.width=W+'px'; cvsCurve.style.height=H+'px';
+  cvsCurve.width=W*window.devicePixelRatio; cvsCurve.height=H*window.devicePixelRatio;
+  ctxC.setTransform(1,0,0,1,0,0); ctxC.scale(window.devicePixelRatio,window.devicePixelRatio);
+  render();
+}
+window.addEventListener('resize', resizeCurve);
+
+function drawCurve(C){
+  const W=cvsCurve.offsetWidth, H=cvsCurve.offsetHeight;
+  ctxC.clearRect(0,0,W,H);
+  const pad={top:16,bottom:30,left:34,right:16};
+  const cw=W-pad.left-pad.right, chH=H-pad.top-pad.bottom;
+  const xmin=1, xmax=15;
+  const N=C.N;
+  let ymax=0;
+  const pts=[];
+  for(let c=xmin;c<=xmax;c+=0.25){
+    const tr=trainMean(c), v=valMean(c,N), sd=stdFold(c,N);
+    pts.push({c,tr,v,sd});
+    ymax=Math.max(ymax, tr, v+sd);
+  }
+  ymax*=1.1;
+  const X = c => pad.left + (c-xmin)/(xmax-xmin)*cw;
+  const Y = v => pad.top + chH - (v/ymax)*chH;
+
+  // gridlines
+  ctxC.font='12px "IBM Plex Sans",sans-serif'; ctxC.fillStyle='#999'; ctxC.textAlign='center';
+  for(let c=xmin; c<=xmax; c+=2){
+    const px=X(c);
+    ctxC.strokeStyle='#f0f0f0'; ctxC.lineWidth=1;
+    ctxC.beginPath(); ctxC.moveTo(px,pad.top); ctxC.lineTo(px,pad.top+chH); ctxC.stroke();
+    ctxC.fillText(c, px, pad.top+chH+16);
+  }
+
+  // shaded ± std band for validation error
+  ctxC.beginPath();
+  pts.forEach((p,i)=>{ const px=X(p.c), py=Y(p.v+p.sd); i?ctxC.lineTo(px,py):ctxC.moveTo(px,py); });
+  for(let i=pts.length-1;i>=0;i--){ const p=pts[i]; ctxC.lineTo(X(p.c), Y(Math.max(0,p.v-p.sd))); }
+  ctxC.closePath(); ctxC.fillStyle='rgba(220,53,69,0.18)'; ctxC.fill();
+
+  // validation mean curve
+  ctxC.beginPath();
+  pts.forEach((p,i)=>{ const px=X(p.c), py=Y(p.v); i?ctxC.lineTo(px,py):ctxC.moveTo(px,py); });
+  ctxC.strokeStyle='#dc3545'; ctxC.lineWidth=2.5; ctxC.stroke();
+
+  // train curve
+  ctxC.beginPath();
+  pts.forEach((p,i)=>{ const px=X(p.c), py=Y(p.tr); i?ctxC.lineTo(px,py):ctxC.moveTo(px,py); });
+  ctxC.strokeStyle='#0d6efd'; ctxC.lineWidth=2.5; ctxC.stroke();
+
+  // optimal complexity dashed line
+  ctxC.setLineDash([5,4]); ctxC.strokeStyle='#20c997'; ctxC.lineWidth=1.5;
+  const ox=X(C.optC);
+  ctxC.beginPath(); ctxC.moveTo(ox,pad.top); ctxC.lineTo(ox,pad.top+chH); ctxC.stroke();
+  ctxC.setLineDash([]);
+
+  // current complexity marker line
+  const cx=X(C.c);
+  ctxC.strokeStyle='#1a1a1a'; ctxC.lineWidth=2;
+  ctxC.beginPath(); ctxC.moveTo(cx,pad.top); ctxC.lineTo(cx,pad.top+chH); ctxC.stroke();
+
+  // dots at current complexity
+  function dot(y,color){ ctxC.beginPath(); ctxC.arc(cx,Y(y),5,0,Math.PI*2); ctxC.fillStyle=color; ctxC.fill(); ctxC.strokeStyle='#fff'; ctxC.lineWidth=1.5; ctxC.stroke(); }
+  dot(C.train, '#0d6efd');
+  dot(C.cvMean, '#6f42c1');
+
+  // baseline
+  ctxC.strokeStyle='#888'; ctxC.lineWidth=1;
+  ctxC.beginPath(); ctxC.moveTo(pad.left,Y(0)); ctxC.lineTo(W-pad.right,Y(0)); ctxC.stroke();
+
+  // x-axis title
+  ctxC.fillStyle='#666'; ctxC.font='12px "IBM Plex Sans",sans-serif';
+  ctxC.fillText(t('ความซับซ้อนของโมเดล (degree/depth) →','Model complexity (degree/depth) →'), W/2, H-2);
+}
+
+/* ---------- text ---------- */
+function fmt(v){ return v.toFixed(2); }
+function render(){
+  const C=compute();
+
+  document.getElementById('nVal').textContent=S.N;
+  document.getElementById('kVal').textContent=S.k;
+  document.getElementById('cVal').textContent=S.c;
+  document.getElementById('cLabel').textContent = t('ความซับซ้อนของโมเดล (degree/depth)','Model complexity (degree/depth)');
+  document.getElementById('kHint').innerHTML = t(
+    'k โฟลด์ = ทำ train/validate ซ้ำ '+S.k+' รอบ แต่ละรอบเปลี่ยนโฟลด์ที่เป็น validation set',
+    'k folds = repeat train/validate '+S.k+' times, rotating which fold is the validation set each time.');
+  document.getElementById('cHint').innerHTML = t(
+    'ค่าน้อย = โมเดลง่าย (เช่น เส้นตรง) · ค่ามาก = โมเดลซับซ้อน (เช่น พหุนามดีกรีสูง / ต้นไม้ลึก)',
+    'Low = simple model (e.g. a line) · High = complex model (e.g. high-degree polynomial / deep tree).');
+
+  document.getElementById('foldLabel').textContent = t(
+    'โฟลด์ที่ '+(S.foldIdx+1)+' / '+S.k+' เป็น validation',
+    'Fold '+(S.foldIdx+1)+' / '+S.k+' is validation');
+
+  document.getElementById('cvMeanOut').textContent = fmt(C.cvMean);
+  document.getElementById('cvStdOut').textContent = '± '+fmt(C.cvStd);
+  document.getElementById('singleOut').textContent = fmt(C.single);
+  document.getElementById('trainOut').textContent = fmt(C.train);
+
+  const dec=document.getElementById('decision');
+  dec.className='decision '+C.zone;
+  if(C.zone==='under') dec.textContent = t('Underfitting — โมเดลง่ายเกินไป (bias สูง) ทั้ง train และ validation error สูงใกล้กัน','Underfitting — model too simple (high bias); train and validation error are both high and close together.');
+  else if(C.zone==='over') dec.textContent = t('Overfitting — โมเดลซับซ้อนเกินไป (variance สูง) train error ต่ำมากแต่ validation error สูงและแกว่งแรง','Overfitting — model too complex (high variance); train error is very low but validation error is high and swings a lot.');
+  else dec.textContent = t('จุดสมดุลดี — ใกล้ความซับซ้อนที่เหมาะสม ('+fmt(C.optC)+')','Good balance — near the optimal complexity ('+fmt(C.optC)+').');
+
+  document.getElementById('story').innerHTML = t(
+    '<b>อ่านค่า:</b> ที่ความซับซ้อน = '+C.c+' โมเดลทำ train error ได้ <b>'+fmt(C.train)+'</b> ส่วนค่าเฉลี่ยจาก '+C.k+'-fold CV คือ <b>'+fmt(C.cvMean)+' ± '+fmt(C.cvStd)+'</b> — ถ้าทดสอบแค่ครั้งเดียว (split เดียว) อาจได้ค่าประมาณ <b>'+fmt(C.single)+'</b> แทน ซึ่งอาจดีกว่าหรือแย่กว่าความจริงโดยบังเอิญ',
+    '<b>Reading it:</b> at complexity = '+C.c+', the model gets a train error of <b>'+fmt(C.train)+'</b>, while the '+C.k+'-fold CV average is <b>'+fmt(C.cvMean)+' ± '+fmt(C.cvStd)+'</b> — if you had only tested once (one split), you might instead have gotten <b>'+fmt(C.single)+'</b>, which could look better or worse than reality purely by chance.');
+
+  document.getElementById('mis').innerHTML = t(
+    '<b>ระวังเข้าใจผิด:</b> CV score ที่ดีไม่ได้แปลว่าโมเดลจะทำงานดีบนข้อมูลจริงเสมอไป — ถ้ามี data leakage (เช่น ทำ feature scaling หรือเลือกฟีเจอร์จากข้อมูลทั้งหมดก่อนแบ่งโฟลด์) ค่า CV จะดูดีเกินจริง นอกจากนี้ std ที่สูงระหว่างโฟลด์ก็บอกว่าโมเดลไม่เสถียร ไม่ควรดูแค่ค่าเฉลี่ยอย่างเดียว',
+    '<b>Common misconception:</b> a good CV score does not guarantee good real-world performance — data leakage (e.g. scaling or selecting features on the whole dataset before splitting into folds) makes CV look artificially good. Also, a high std across folds signals an unstable model; do not look at the mean alone.');
+
+  drawFold(C);
+  drawCurve(C);
+}
+
+/* init */
+setLang('th');
+setTimeout(()=>{ resizeFold(); resizeCurve(); }, 50);
+</script>
+</body>
+</html>
