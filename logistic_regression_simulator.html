@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Logistic Regression Simulator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;600;700;800&family=IBM+Plex+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: "Noto Sans Thai","IBM Plex Sans",sans-serif; font-size: 18px; font-weight: 600; background: #f5f5f5; color: #1a1a1a; min-height: 100vh; }
+
+.header { background: #fff; border-bottom: 3px solid #1a1a1a; padding: 16px 32px; display: flex; align-items: center; justify-content: space-between; }
+.header-left { display: flex; align-items: baseline; gap: 14px; }
+.header h1 { font-size: 28px; font-weight: 800; }
+
+.home-btn { text-decoration: none; color: #6c757d; font-size: 15px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border: 1px solid #dee2e6; border-radius: 6px; background: #fff; transition: all 0.2s; flex-shrink: 0; }
+.home-btn:hover { background: #f8f9fa; color: #0d6efd; }
+
+.lang-toggle { display: flex; border: 2px solid #1a1a1a; border-radius: 8px; overflow: hidden; }
+.lang-btn { font-family: inherit; font-size: 16px; font-weight: 700; padding: 6px 16px; border: none; cursor: pointer; background: #fff; color: #888; transition: all .12s; }
+.lang-btn.active { background: #1a1a1a; color: #fff; }
+
+.main { max-width: 1000px; margin: 24px auto; padding: 0 24px; }
+.card { background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 20px; margin-bottom: 16px; }
+.card-title { font-size: 20px; font-weight: 800; margin-bottom: 14px; border-bottom: 1px solid #eee; padding-bottom: 8px; }
+
+.layout { display: grid; grid-template-columns: 340px 1fr; gap: 20px; }
+@media (max-width: 850px) { .layout { grid-template-columns: 1fr; } }
+
+/* Segmented control */
+.seg { display: flex; border: 2px solid #1a1a1a; border-radius: 8px; overflow: hidden; margin-bottom: 6px; }
+.seg button { flex: 1; font-family: inherit; font-size: 15px; font-weight: 700; padding: 8px 4px; border: none; border-right: 2px solid #1a1a1a; cursor: pointer; background: #fff; color: #888; transition: all .12s; }
+.seg button:last-child { border-right: none; }
+.seg button.active { background: #1a1a1a; color: #fff; }
+.field-label { font-size: 16px; font-weight: 700; margin-bottom: 6px; }
+.sub-hint { font-size: 13px; font-weight: 600; color: #888; margin-top: 4px; line-height: 1.4; }
+
+/* Sliders */
+.slider-group { margin-bottom: 18px; }
+.slider-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px; }
+.slider-name { font-size: 16px; font-weight: 700; }
+.slider-val { font-size: 22px; font-weight: 800; min-width: 48px; text-align: right; color: #1a1a1a; }
+input[type=range] { width: 100%; cursor: pointer; }
+input[type=range]#b0Slider, input[type=range]#b1Slider { accent-color: #1a1a1a; }
+input[type=range]#threshSlider { accent-color: #6c757d; }
+input[type=range]#xSlider { accent-color: #0d6efd; }
+
+/* Buttons */
+.btn-row { display: flex; gap: 8px; margin-top: 4px; }
+.action-btn { flex: 1; font-family: inherit; font-size: 14px; font-weight: 700; padding: 10px 6px; border: 2px solid #1a1a1a; border-radius: 6px; cursor: pointer; background: #1a1a1a; color: #fff; transition: all .12s; }
+.action-btn:hover { background: #333; }
+.action-btn.secondary { background: #fff; color: #1a1a1a; }
+.action-btn.secondary:hover { background: #f2f2f2; }
+
+/* Canvas */
+canvas { width: 100%; display: block; border-radius: 4px; background: #fff; cursor: crosshair; }
+.canvas-hint { font-size: 13px; font-weight: 600; color: #888; margin-top: 8px; text-align: center; }
+
+/* Stats & Legends */
+.stat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 16px; }
+.stat { background: #f8f9fa; border: 1px solid #e0e0e0; border-radius: 6px; padding: 12px; text-align: center; }
+.stat-val { font-size: 22px; font-weight: 800; }
+.stat-lbl { font-size: 13px; font-weight: 600; color: #555; margin-top: 2px; }
+
+.legend { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 12px; justify-content: center; }
+.legend-item { display: flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 600; color: #555; }
+.legend-color { width: 16px; height: 12px; border-radius: 3px; }
+.legend-dot { width: 13px; height: 13px; border-radius: 50%; border: 1.5px solid rgba(0,0,0,0.25); }
+
+.decision { font-size: 17px; font-weight: 800; padding: 12px 16px; border-radius: 6px; margin-top: 16px; text-align: center; border: 2px solid; }
+.decision.reject { background: #e8f7f1; border-color: #20c997; color: #0f7a5a; }
+.decision.fail { background: #fdecea; border-color: #dc3545; color: #b02a37; }
+
+.insight { font-size: 16px; font-weight: 600; color: #333; background: #f8f9fa; border-left: 4px solid #1a1a1a; padding: 12px 16px; border-radius: 0 6px 6px 0; margin-top: 16px; line-height: 1.5; }
+.insight.mis { border-left-color: #dc3545; background: #fff6f6; color: #7d2020; }
+.insight b { color: #1a1a1a; }
+.insight.mis b { color: #7d2020; }
+
+.questions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.q-chip { font-size: 15px; font-weight: 600; padding: 6px 14px; border: 1px solid #bbb; border-radius: 20px; color: #444; background: #fafafa; line-height: 1.4; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-left">
+    <a href="index.html" class="home-btn" data-th="← หน้าแรก" data-en="← Home">← Home</a>
+    <h1>Logistic Regression</h1>
+  </div>
+  <div class="lang-toggle">
+    <button class="lang-btn active" onclick="setLang('th')">TH</button>
+    <button class="lang-btn" onclick="setLang('en')">EN</button>
+  </div>
+</div>
+
+<div class="main">
+  <div class="layout">
+
+    <!-- LEFT: CONTROLS -->
+    <div>
+      <div class="card">
+        <div class="card-title" data-th="ตั้งค่าและข้อมูล" data-en="Setup & Data">ตั้งค่าและข้อมูล</div>
+
+        <div class="slider-group">
+          <div class="field-label" data-th="บริบทตัวอย่าง" data-en="Example context">บริบทตัวอย่าง</div>
+          <div class="seg" id="segCtx">
+            <button data-ctx="study" class="active" onclick="setCtx('study')" data-th="ชั่วโมงอ่าน→สอบผ่าน" data-en="Study hrs→Pass">ชั่วโมงอ่าน→สอบผ่าน</button>
+            <button data-ctx="ad" onclick="setCtx('ad')" data-th="งบโฆษณา→ซื้อ" data-en="Ad spend→Buy">งบโฆษณา→ซื้อ</button>
+          </div>
+        </div>
+
+        <div class="slider-group">
+          <div class="field-label" data-th="คลิกที่กราฟเพื่อเพิ่มจุดคลาส" data-en="Click the chart to add a point of class">คลิกที่กราฟเพื่อเพิ่มจุดคลาส</div>
+          <div class="seg" id="segAddMode">
+            <button data-mode="1" class="active" onclick="setAddMode(1)" id="btnMode1">1</button>
+            <button data-mode="0" onclick="setAddMode(0)" id="btnMode0">0</button>
+          </div>
+          <div class="sub-hint" data-th="ดับเบิลคลิกที่จุดเพื่อลบ" data-en="Double-click a point to remove it">ดับเบิลคลิกที่จุดเพื่อลบ</div>
+          <div class="btn-row">
+            <button class="action-btn" onclick="fitNow()" data-th="ฟิตด้วย MLE" data-en="Fit (MLE)">ฟิตด้วย MLE</button>
+            <button class="action-btn secondary" onclick="resetData()" data-th="รีเซ็ตข้อมูล" data-en="Reset data">รีเซ็ตข้อมูล</button>
+          </div>
+        </div>
+
+        <div class="slider-group">
+          <div class="slider-header">
+            <span class="slider-name" data-th="จุดตัดแกน β₀" data-en="Intercept β₀">จุดตัดแกน β₀</span>
+            <span class="slider-val" id="b0Val">0.00</span>
+          </div>
+          <input type="range" id="b0Slider" min="-25" max="15" step="0.1" value="0" oninput="onModelInput()">
+        </div>
+
+        <div class="slider-group">
+          <div class="slider-header">
+            <span class="slider-name" data-th="ความชัน β₁" data-en="Slope β₁">ความชัน β₁</span>
+            <span class="slider-val" id="b1Val">0.00</span>
+          </div>
+          <input type="range" id="b1Slider" min="-6" max="6" step="0.05" value="0" oninput="onModelInput()">
+        </div>
+
+        <div class="slider-group">
+          <div class="slider-header">
+            <span class="slider-name" data-th="เกณฑ์ตัดสิน (threshold)" data-en="Decision threshold">เกณฑ์ตัดสิน (threshold)</span>
+            <span class="slider-val" style="color:#6c757d;" id="threshVal">0.50</span>
+          </div>
+          <input type="range" id="threshSlider" min="0.05" max="0.95" step="0.01" value="0.5" oninput="onModelInput()">
+          <div class="sub-hint" data-th="เส้นแบ่งที่เราเลือกเอง — 0.5 ไม่ใช่ค่าศักดิ์สิทธิ์" data-en="A line we choose — 0.5 is not sacred.">เส้นแบ่งที่เราเลือกเอง — 0.5 ไม่ใช่ค่าศักดิ์สิทธิ์</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title" data-th="คำถามชวนคิด" data-en="Discussion Questions">คำถามชวนคิด</div>
+        <div class="questions">
+          <div class="q-chip" data-th="ถ้า β₁ ชันขึ้นมาก เส้นโค้ง sigmoid จะเปลี่ยนอย่างไร แล้วมัน 'ใกล้เคียง' การจำแนกแบบเส้นตรงมากขึ้นไหม?" data-en="If β₁ gets much steeper, how does the sigmoid change — does it start to look like a hard cutoff?">ถ้า β₁ ชันขึ้นมาก เส้นโค้ง sigmoid จะเปลี่ยนอย่างไร แล้วมัน 'ใกล้เคียง' การจำแนกแบบเส้นตรงมากขึ้นไหม?</div>
+          <div class="q-chip" data-th="ทำไมลด threshold จาก 0.5 เป็น 0.3 ถึงทำให้จุดถูกจัดเป็น class 1 มากขึ้น?" data-en="Why does lowering the threshold from 0.5 to 0.3 classify more points as class 1?">ทำไมลด threshold จาก 0.5 เป็น 0.3 ถึงทำให้จุดถูกจัดเป็น class 1 มากขึ้น?</div>
+          <div class="q-chip" data-th="ทำไม 'ฟิตด้วย MLE' ถึงไม่ทำให้ log-loss เป็นศูนย์เสมอ แม้ปรับ β₀,β₁ เท่าไรก็ตาม?" data-en="Why doesn't 'Fit (MLE)' ever drive log-loss to exactly zero, no matter how β₀, β₁ are tuned?">ทำไม 'ฟิตด้วย MLE' ถึงไม่ทำให้ log-loss เป็นศูนย์เสมอ แม้ปรับ β₀,β₁ เท่าไรก็ตาม?</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT: PLOT -->
+    <div>
+      <div class="card">
+        <div class="card-title" data-th="เส้นโค้ง Sigmoid และข้อมูล" data-en="Sigmoid curve and data">เส้นโค้ง Sigmoid และข้อมูล</div>
+
+        <canvas id="cvs" height="340"></canvas>
+        <div class="canvas-hint" id="xAxisLabel"></div>
+
+        <div class="legend">
+          <div class="legend-item"><div class="legend-color" style="background:#0d6efd;"></div><span data-th="p(x) = ความน่าจะเป็นทำนาย" data-en="p(x) = predicted probability">p(x) = ความน่าจะเป็นทำนาย</span></div>
+          <div class="legend-item"><div class="legend-dot" style="background:#20c997;"></div><span data-th="จุดข้อมูล class 1" data-en="Data point, class 1">จุดข้อมูล class 1</span></div>
+          <div class="legend-item"><div class="legend-dot" style="background:#dc3545;"></div><span data-th="จุดข้อมูล class 0" data-en="Data point, class 0">จุดข้อมูล class 0</span></div>
+          <div class="legend-item"><div style="width:12px; height:0; border-top:2px dashed #6c757d;"></div><span data-th="threshold" data-en="threshold">threshold</span></div>
+          <div class="legend-item"><div style="width:12px; height:0; border-top:2px dashed #b02a37;"></div><span data-th="เส้นแบ่งกลุ่ม" data-en="decision boundary">เส้นแบ่งกลุ่ม</span></div>
+        </div>
+
+        <div class="stat-grid">
+          <div class="stat"><div class="stat-val" id="b0Out">–</div><div class="stat-lbl">β₀</div></div>
+          <div class="stat"><div class="stat-val" id="b1Out">–</div><div class="stat-lbl">β₁</div></div>
+          <div class="stat"><div class="stat-val" id="boundaryOut">–</div><div class="stat-lbl" data-th="เส้นแบ่งกลุ่ม x*" data-en="Boundary x*">เส้นแบ่งกลุ่ม x*</div></div>
+          <div class="stat" style="border-bottom:4px solid #dc3545;"><div class="stat-val" style="color:#dc3545;" id="lossOut">–</div><div class="stat-lbl" data-th="log-loss" data-en="log-loss">log-loss</div></div>
+          <div class="stat" style="border-bottom:4px solid #20c997;"><div class="stat-val" style="color:#0f7a5a;" id="accOut">–</div><div class="stat-lbl" data-th="ความแม่นยำ" data-en="accuracy">ความแม่นยำ</div></div>
+          <div class="stat" style="border-bottom:4px solid #6c757d;"><div class="stat-val" style="color:#6c757d;" id="threshOut2">0.50</div><div class="stat-lbl" data-th="threshold" data-en="threshold">threshold</div></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title" data-th="สำรวจค่าที่จุดหนึ่ง" data-en="Explore a single point">สำรวจค่าที่จุดหนึ่ง</div>
+        <div class="slider-group" style="margin-bottom:8px;">
+          <div class="slider-header">
+            <span class="slider-name" id="xExploreLabel"></span>
+            <span class="slider-val" style="color:#0d6efd;" id="xVal">5.0</span>
+          </div>
+          <input type="range" id="xSlider" min="0" max="10" step="0.1" value="5" oninput="onModelInput()">
+        </div>
+        <div class="stat-grid" style="margin-top:6px;">
+          <div class="stat"><div class="stat-val" id="zOut">–</div><div class="stat-lbl" data-th="log-odds (z)" data-en="log-odds (z)">log-odds (z)</div></div>
+          <div class="stat"><div class="stat-val" id="oddsOut">–</div><div class="stat-lbl" data-th="อัตราต่อรอง (odds)" data-en="odds = e^z">อัตราต่อรอง (odds)</div></div>
+          <div class="stat" style="border-bottom:4px solid #0d6efd;"><div class="stat-val" style="color:#0d6efd;" id="pOut">–</div><div class="stat-lbl" data-th="p(x)" data-en="p(x)">p(x)</div></div>
+        </div>
+        <div class="decision" id="decision"></div>
+        <div class="insight" id="story"></div>
+        <div class="insight mis" id="mis"></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+/* ---------- language ---------- */
+var currentLang = 'th';
+function t(th, en){ return currentLang === 'en' ? en : th; }
+function setLang(lang){
+  currentLang = lang;
+  document.querySelectorAll('.lang-btn').forEach(b => b.classList.toggle('active', b.textContent.trim().toLowerCase() === lang));
+  document.querySelectorAll('[data-th]').forEach(el => { var v = el.getAttribute('data-'+lang); if(v!==null) el.innerHTML = v; });
+  render();
+}
+
+/* ---------- math ---------- */
+function sigmoid(z){ return 1/(1+Math.exp(-z)); }
+function logit(p){ return Math.log(p/(1-p)); }
+
+function fitLogistic(points){
+  const xs = points.map(p=>p.x);
+  const mean = xs.reduce((a,b)=>a+b,0)/xs.length;
+  const std = Math.sqrt(xs.reduce((a,b)=>a+(b-mean)*(b-mean),0)/xs.length) || 1;
+  let b0=0, b1=0;
+  const lr=0.5, iters=2000;
+  for(let it=0; it<iters; it++){
+    let g0=0, g1=0;
+    for(const pt of points){
+      const xn=(pt.x-mean)/std;
+      const p=sigmoid(b0+b1*xn);
+      const err=p-pt.y;
+      g0+=err; g1+=err*xn;
+    }
+    g0/=points.length; g1/=points.length;
+    b0-=lr*g0; b1-=lr*g1;
+  }
+  const beta1 = b1/std;
+  const beta0 = b0 - b1*mean/std;
+  return {beta0, beta1};
+}
+function logLoss(points, b0, b1){
+  let s=0;
+  for(const pt of points){
+    const p = Math.min(Math.max(sigmoid(b0+b1*pt.x),1e-9),1-1e-9);
+    s += -(pt.y*Math.log(p) + (1-pt.y)*Math.log(1-p));
+  }
+  return s/points.length;
+}
+function accuracy(points, b0, b1, thresh){
+  let correct=0;
+  for(const pt of points){
+    const p=sigmoid(b0+b1*pt.x);
+    const pred = p>=thresh ? 1 : 0;
+    if(pred===pt.y) correct++;
+  }
+  return correct/points.length;
+}
+
+/* ---------- state ---------- */
+const DEFAULT_POINTS = [
+  {x:1,y:0},{x:1.5,y:0},{x:2,y:0},{x:2.5,y:0},{x:3,y:0},{x:3.5,y:1},{x:4,y:0},
+  {x:4.5,y:1},{x:5,y:0},{x:5.5,y:1},{x:6,y:1},{x:6.5,y:0},{x:7,y:1},{x:7.5,y:1},
+  {x:8,y:1},{x:8.5,y:1},{x:9,y:1},{x:9.5,y:1},{x:10,y:1}
+];
+const S = { ctx:'study', addMode:1, threshold:0.5, xExplore:5, points: DEFAULT_POINTS.map(p=>({...p})), beta0:0, beta1:0 };
+
+function setCtx(c){
+  S.ctx=c;
+  document.querySelectorAll('#segCtx button').forEach(b=>b.classList.toggle('active', b.dataset.ctx===c));
+  render();
+}
+function setAddMode(m){
+  S.addMode=m;
+  document.querySelectorAll('#segAddMode button').forEach(b=>b.classList.toggle('active', parseInt(b.dataset.mode)===m));
+}
+function onModelInput(){
+  S.beta0=parseFloat(document.getElementById('b0Slider').value);
+  S.beta1=parseFloat(document.getElementById('b1Slider').value);
+  S.threshold=parseFloat(document.getElementById('threshSlider').value);
+  S.xExplore=parseFloat(document.getElementById('xSlider').value);
+  render();
+}
+function fitNow(){
+  const fit=fitLogistic(S.points);
+  S.beta0=fit.beta0; S.beta1=fit.beta1;
+  document.getElementById('b0Slider').value=Math.max(-25,Math.min(15,fit.beta0));
+  document.getElementById('b1Slider').value=Math.max(-6,Math.min(6,fit.beta1));
+  render();
+}
+function resetData(){
+  S.points = DEFAULT_POINTS.map(p=>({...p}));
+  fitNow();
+}
+
+/* ---------- canvas ---------- */
+const canvas=document.getElementById('cvs'), ctx=canvas.getContext('2d');
+const XMIN=-0.5, XMAX=10.5;
+function pad(){ return {top:20,bottom:34,left:46,right:20}; }
+function X(x){ const W=canvas.offsetWidth, p=pad(); const cw=W-p.left-p.right; return p.left+(x-XMIN)/(XMAX-XMIN)*cw; }
+function Y(y){ const H=canvas.offsetHeight, p=pad(); const chH=H-p.top-p.bottom; return p.top+chH-y*chH; }
+function invX(px){ const W=canvas.offsetWidth, p=pad(); const cw=W-p.left-p.right; return XMIN+(px-p.left)/cw*(XMAX-XMIN); }
+
+function resizeCanvas(){
+  const W=canvas.parentElement.clientWidth-40, H=340;
+  canvas.style.width=W+'px'; canvas.style.height=H+'px';
+  canvas.width=W*window.devicePixelRatio; canvas.height=H*window.devicePixelRatio;
+  ctx.setTransform(1,0,0,1,0,0); ctx.scale(window.devicePixelRatio,window.devicePixelRatio);
+  render();
+}
+window.addEventListener('resize', resizeCanvas);
+
+canvas.addEventListener('click', function(e){
+  const rect=canvas.getBoundingClientRect();
+  const px=e.clientX-rect.left;
+  let x=invX(px);
+  x=Math.max(0,Math.min(10,Math.round(x*10)/10));
+  S.points.push({x:x, y:S.addMode});
+  render();
+});
+canvas.addEventListener('dblclick', function(e){
+  const rect=canvas.getBoundingClientRect();
+  const px=e.clientX-rect.left, py=e.clientY-rect.top;
+  const xClick=invX(px);
+  let bestI=-1, bestD=Infinity;
+  S.points.forEach((pt,i)=>{
+    const d=Math.hypot(X(pt.x)-px, Y(pt.y)-py);
+    if(d<bestD){bestD=d; bestI=i;}
+  });
+  if(bestI>=0 && bestD<24 && S.points.length>2){ S.points.splice(bestI,1); render(); }
+});
+
+function draw(){
+  const W=canvas.offsetWidth, H=canvas.offsetHeight;
+  ctx.clearRect(0,0,W,H);
+  const p=pad();
+  const b0=S.beta0, b1=S.beta1;
+
+  // horizontal gridlines (probability axis)
+  ctx.font='13px "IBM Plex Sans",sans-serif'; ctx.textAlign='right'; ctx.textBaseline='middle';
+  [0,0.25,0.5,0.75,1].forEach(yt=>{
+    const py=Y(yt);
+    ctx.strokeStyle='#f0f0f0'; ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(p.left,py); ctx.lineTo(W-p.right,py); ctx.stroke();
+    ctx.fillStyle='#999'; ctx.fillText(yt.toFixed(2), p.left-8, py);
+  });
+  // vertical ticks
+  ctx.textAlign='center'; ctx.textBaseline='alphabetic';
+  [0,2,4,6,8,10].forEach(xt=>{
+    const px=X(xt);
+    ctx.strokeStyle='#f5f5f5'; ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(px,p.top); ctx.lineTo(px,H-p.bottom); ctx.stroke();
+    ctx.fillStyle='#999'; ctx.fillText(xt, px, H-p.bottom+18);
+  });
+
+  // threshold horizontal dashed line
+  ctx.setLineDash([5,4]); ctx.strokeStyle='#6c757d'; ctx.lineWidth=1.5;
+  ctx.beginPath(); ctx.moveTo(p.left,Y(S.threshold)); ctx.lineTo(W-p.right,Y(S.threshold)); ctx.stroke();
+
+  // decision boundary vertical dashed line
+  if(b1!==0){
+    const xstar = (logit(S.threshold)-b0)/b1;
+    if(xstar>=XMIN && xstar<=XMAX){
+      ctx.strokeStyle='#b02a37';
+      ctx.beginPath(); ctx.moveTo(X(xstar),p.top); ctx.lineTo(X(xstar),H-p.bottom); ctx.stroke();
+    }
+  }
+  ctx.setLineDash([]);
+
+  // sigmoid curve
+  ctx.beginPath();
+  const N=200;
+  for(let i=0;i<=N;i++){
+    const x=XMIN+(XMAX-XMIN)*i/N;
+    const py=Y(sigmoid(b0+b1*x));
+    i? ctx.lineTo(X(x),py) : ctx.moveTo(X(x),py);
+  }
+  ctx.strokeStyle='#0d6efd'; ctx.lineWidth=2.5; ctx.stroke();
+
+  // data points
+  S.points.forEach(pt=>{
+    const px=X(pt.x), py=Y(pt.y);
+    ctx.beginPath(); ctx.arc(px,py,7,0,2*Math.PI);
+    ctx.fillStyle = pt.y===1 ? '#20c997' : '#dc3545';
+    ctx.fill();
+    ctx.strokeStyle='rgba(0,0,0,0.25)'; ctx.lineWidth=1.5; ctx.stroke();
+  });
+
+  // explorer marker
+  const xe=S.xExplore, pe=sigmoid(b0+b1*xe);
+  ctx.strokeStyle='#1a1a1a'; ctx.lineWidth=2;
+  ctx.beginPath(); ctx.moveTo(X(xe),p.top); ctx.lineTo(X(xe),H-p.bottom); ctx.stroke();
+  ctx.beginPath(); ctx.arc(X(xe),Y(pe),6,0,2*Math.PI);
+  ctx.fillStyle='#1a1a1a'; ctx.fill();
+}
+
+/* ---------- text ---------- */
+function render(){
+  const b0=S.beta0, b1=S.beta1, thresh=S.threshold, xe=S.xExplore;
+  const z = b0+b1*xe, odds=Math.exp(z), p=sigmoid(z);
+  const loss = logLoss(S.points,b0,b1);
+  const acc = accuracy(S.points,b0,b1,thresh);
+  let xstar = b1!==0 ? (logit(thresh)-b0)/b1 : NaN;
+
+  document.getElementById('b0Val').textContent=b0.toFixed(2);
+  document.getElementById('b1Val').textContent=b1.toFixed(2);
+  document.getElementById('threshVal').textContent=thresh.toFixed(2);
+  document.getElementById('xVal').textContent=xe.toFixed(1);
+
+  document.getElementById('b0Out').textContent=b0.toFixed(2);
+  document.getElementById('b1Out').textContent=b1.toFixed(2);
+  document.getElementById('boundaryOut').textContent = (b1!==0 && isFinite(xstar)) ? xstar.toFixed(2) : '–';
+  document.getElementById('lossOut').textContent=loss.toFixed(3);
+  document.getElementById('accOut').textContent=(acc*100).toFixed(0)+'%';
+  document.getElementById('threshOut2').textContent=thresh.toFixed(2);
+
+  document.getElementById('zOut').textContent=z.toFixed(2);
+  document.getElementById('oddsOut').textContent = odds<100 ? odds.toFixed(2) : odds.toExponential(2);
+  document.getElementById('pOut').textContent=p.toFixed(3);
+
+  const xLabel = S.ctx==='study' ? t('ชั่วโมงอ่านหนังสือ (x)','Study hours (x)') : t('งบโฆษณา (พันบาท) (x)','Ad spend (k฿) (x)');
+  document.getElementById('xAxisLabel').textContent = xLabel;
+  document.getElementById('xExploreLabel').innerHTML = t('เลือกค่า x เพื่อดูผลทำนาย ('+xLabel+')','Pick a value of x to see the prediction ('+xLabel+')');
+
+  const y1Label = S.ctx==='study' ? t('สอบผ่าน','pass') : t('ซื้อสินค้า','purchase');
+  const y0Label = S.ctx==='study' ? t('สอบตก','fail') : t('ไม่ซื้อ','no purchase');
+
+  // decision
+  const dec=document.getElementById('decision');
+  const isPos = p>=thresh;
+  dec.className='decision '+(isPos?'reject':'fail');
+  dec.innerHTML = isPos
+    ? t('p ≥ threshold → จัดเป็น <b>class 1</b> ('+y1Label+')','p ≥ threshold → classified as <b>class 1</b> ('+y1Label+')')
+    : t('p &lt; threshold → จัดเป็น <b>class 0</b> ('+y0Label+')','p &lt; threshold → classified as <b>class 0</b> ('+y0Label+')');
+
+  document.getElementById('story').innerHTML = story(xLabel,y1Label,y0Label,z,odds,p,xe);
+  document.getElementById('mis').innerHTML = t(
+    '<b>ระวังเข้าใจผิด:</b> β₁ ไม่ได้บอกว่า "เพิ่ม x หนึ่งหน่วยแล้วความน่าจะเป็นเพิ่มเท่านี้เป๊ะๆ" — ผลของ x ต่อ<b>ความน่าจะเป็น</b>ไม่คงที่ (ขึ้นกับตำแหน่งบนเส้นโค้ง) มีแต่ผลต่อ <b>log-odds</b> เท่านั้นที่คงที่ต่อหนึ่งหน่วยของ x และ threshold 0.5 เป็นเพียงค่าที่เราเลือก ไม่ใช่กฎตายตัว',
+    '<b>Common misconception:</b> β₁ does not mean "one more unit of x adds exactly this much probability" — the effect on <b>probability</b> is not constant (it depends on where you are on the curve); only the effect on <b>log-odds</b> is constant per unit of x. Also, a 0.5 threshold is a choice we make, not a fixed rule.');
+
+  draw();
+}
+function story(xLabel,y1Label,y0Label,z,odds,p,xe){
+  return t(
+    '<b>อ่านค่า:</b> ที่ '+xLabel.replace(' (x)','')+' = '+xe.toFixed(1)+' โมเดลให้ log-odds = <b>'+z.toFixed(2)+'</b> ซึ่งแปลงเป็นอัตราต่อรอง (odds) = <b>'+ (odds<100?odds.toFixed(2):odds.toExponential(2)) +'</b> และความน่าจะเป็นที่จะเป็น "'+y1Label+'" คือ <b>'+p.toFixed(3)+'</b> — ยิ่ง β₁ มาก การเปลี่ยนแปลงของ x ยิ่งมีผลต่อ log-odds มาก',
+    '<b>Reading it:</b> at '+xLabel.replace(' (x)','')+' = '+xe.toFixed(1)+', the model gives log-odds = <b>'+z.toFixed(2)+'</b>, which converts to odds = <b>'+ (odds<100?odds.toFixed(2):odds.toExponential(2)) +'</b>, and a probability of "'+y1Label+'" of <b>'+p.toFixed(3)+'</b> — the larger β₁ is, the more a change in x moves the log-odds.');
+}
+
+/* init */
+fitNow();
+setLang('th');
+setTimeout(resizeCanvas, 50);
+</script>
+</body>
+</html>
