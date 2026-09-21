@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PCA Explorer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;600;700;800&family=IBM+Plex+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: "Noto Sans Thai","IBM Plex Sans",sans-serif; font-size: 18px; font-weight: 600; background: #f5f5f5; color: #1a1a1a; min-height: 100vh; }
+
+.header { background: #fff; border-bottom: 3px solid #1a1a1a; padding: 16px 32px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.header-left { display: flex; align-items: baseline; gap: 14px; }
+.header h1 { font-size: 28px; font-weight: 800; }
+
+.home-btn { text-decoration: none; color: #6c757d; font-size: 15px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border: 1px solid #dee2e6; border-radius: 6px; background: #fff; transition: all 0.2s; flex-shrink: 0; }
+.home-btn:hover { background: #f8f9fa; color: #0d6efd; }
+
+.lang-toggle { display: flex; border: 2px solid #1a1a1a; border-radius: 8px; overflow: hidden; }
+.lang-btn { font-family: inherit; font-size: 16px; font-weight: 700; padding: 6px 16px; border: none; cursor: pointer; background: #fff; color: #888; transition: all .12s; }
+.lang-btn.active { background: #1a1a1a; color: #fff; }
+
+.main { max-width: 1000px; margin: 24px auto; padding: 0 24px; }
+.card { background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 20px; margin-bottom: 16px; }
+.card-title { font-size: 20px; font-weight: 800; margin-bottom: 14px; border-bottom: 1px solid #eee; padding-bottom: 8px; }
+
+.layout { display: grid; grid-template-columns: 340px 1fr; gap: 20px; }
+@media (max-width: 850px) { .layout { grid-template-columns: 1fr; } .header { padding: 14px 16px; } .main { padding: 0 12px; } }
+
+/* Segmented control */
+.seg { display: flex; border: 2px solid #1a1a1a; border-radius: 8px; overflow: hidden; margin-bottom: 6px; }
+.seg button { flex: 1; font-family: inherit; font-size: 15px; font-weight: 700; padding: 8px 4px; border: none; border-right: 2px solid #1a1a1a; cursor: pointer; background: #fff; color: #888; transition: all .12s; }
+.seg button:last-child { border-right: none; }
+.seg button.active { background: #1a1a1a; color: #fff; }
+.field-label { font-size: 16px; font-weight: 700; margin-bottom: 6px; }
+.sub-hint { font-size: 13px; font-weight: 600; color: #888; margin-top: 4px; line-height: 1.4; }
+
+/* Buttons & checkboxes */
+.act-btn { width: 100%; font-family: inherit; font-size: 15px; font-weight: 700; padding: 9px 12px; border: 2px solid #1a1a1a; border-radius: 8px; background: #fff; color: #1a1a1a; cursor: pointer; transition: all .12s; }
+.act-btn:hover { background: #f0f0f0; }
+.act-btn.primary { background: #1a1a1a; color: #fff; }
+.act-btn.primary:hover { background: #333; }
+.check-row { display: flex; align-items: center; gap: 8px; font-size: 15px; font-weight: 600; color: #333; margin-top: 10px; cursor: pointer; }
+.check-row input { width: 18px; height: 18px; accent-color: #1a1a1a; cursor: pointer; }
+
+/* Sliders */
+.slider-group { margin-bottom: 18px; }
+.slider-group:last-child { margin-bottom: 0; }
+.slider-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px; }
+.slider-name { font-size: 16px; font-weight: 700; }
+.slider-val { font-size: 22px; font-weight: 800; min-width: 48px; text-align: right; color: #1a1a1a; }
+input[type=range] { width: 100%; cursor: pointer; }
+input[type=range]#rSlider { accent-color: #1a1a1a; }
+input[type=range]#nSlider { accent-color: #0d6efd; }
+input[type=range]#thSlider { accent-color: #dc3545; }
+
+/* Canvas */
+canvas { width: 100%; display: block; border-radius: 4px; background: #fff; }
+canvas#cvs { cursor: crosshair; touch-action: none; }
+.strip-label { font-size: 14px; font-weight: 700; color: #555; margin-top: 14px; margin-bottom: 4px; }
+
+/* Stats & Legends */
+.stat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 16px; }
+.stat { background: #f8f9fa; border: 1px solid #e0e0e0; border-radius: 6px; padding: 12px; text-align: center; }
+.stat-val { font-size: 24px; font-weight: 800; }
+.stat-lbl { font-size: 14px; font-weight: 600; color: #555; margin-top: 2px; }
+
+.formula { font-family: "IBM Plex Sans","Noto Sans Thai",sans-serif; font-size: 16px; font-weight: 600; text-align: center; margin-top: 12px; color: #333; line-height: 1.6; }
+.formula .muted { color: #888; font-size: 14px; }
+
+.legend { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 12px; justify-content: center; }
+.legend-item { display: flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 600; color: #555; }
+.legend-dot { width: 10px; height: 10px; border-radius: 50%; }
+.legend-line { width: 18px; height: 0; border-top: 3px solid; }
+.legend-dash { width: 18px; height: 0; border-top: 2px dashed; }
+
+.decision { font-size: 17px; font-weight: 800; padding: 12px 16px; border-radius: 6px; margin-top: 16px; text-align: center; border: 2px solid; }
+.decision.hit { background: #e8f7f1; border-color: #20c997; color: #0f7a5a; }
+.decision.far { background: #fff8e6; border-color: #f0ad4e; color: #8a5a00; }
+.decision.pc2 { background: #f3effb; border-color: #6f42c1; color: #4b2a8a; }
+
+.insight { font-size: 16px; font-weight: 600; color: #333; background: #f8f9fa; border-left: 4px solid #1a1a1a; padding: 12px 16px; border-radius: 0 6px 6px 0; margin-top: 16px; line-height: 1.5; }
+.insight b { color: #1a1a1a; }
+.insight.scale { border-left-color: #6f42c1; background: #f8f5fd; }
+.insight.mis { border-left-color: #dc3545; background: #fff6f6; color: #7d2020; }
+.insight.mis b { color: #7d2020; }
+
+.questions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.q-chip { font-size: 15px; font-weight: 600; padding: 6px 14px; border: 1px solid #bbb; border-radius: 20px; color: #444; background: #fafafa; line-height: 1.4; }
+
+button:focus-visible, input:focus-visible, a:focus-visible { outline: 3px solid #0d6efd; outline-offset: 2px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-left">
+    <a href="index.html" class="home-btn" data-th="← หน้าแรก" data-en="← Home">← Home</a>
+    <h1>PCA Explorer</h1>
+  </div>
+  <div class="lang-toggle">
+    <button class="lang-btn active" onclick="setLang('th')">TH</button>
+    <button class="lang-btn" onclick="setLang('en')">EN</button>
+  </div>
+</div>
+
+<div class="main">
+  <div class="layout">
+
+    <!-- LEFT: CONTROLS -->
+    <div>
+      <div class="card">
+        <div class="card-title" data-th="ข้อมูล: ส่วนสูงและน้ำหนัก" data-en="Data: height and weight">ข้อมูล: ส่วนสูงและน้ำหนัก</div>
+
+        <div class="slider-group">
+          <div class="slider-header">
+            <span class="slider-name" data-th="สหสัมพันธ์ r" data-en="Correlation r">สหสัมพันธ์ r</span>
+            <span class="slider-val" id="rVal">0.70</span>
+          </div>
+          <input type="range" id="rSlider" min="-0.95" max="0.95" step="0.05" value="0.7" oninput="onInput()">
+          <div class="sub-hint" id="rHint"></div>
+        </div>
+
+        <div class="slider-group">
+          <div class="slider-header">
+            <span class="slider-name" data-th="จำนวนคน n" data-en="Number of people n">จำนวนคน n</span>
+            <span class="slider-val" style="color:#0d6efd;" id="nVal">80</span>
+          </div>
+          <input type="range" id="nSlider" min="10" max="300" step="5" value="80" oninput="onInput()">
+        </div>
+
+        <div class="slider-group">
+          <button class="act-btn" onclick="newData()" data-th="สุ่มข้อมูลชุดใหม่" data-en="Draw a new sample">สุ่มข้อมูลชุดใหม่</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title" data-th="เส้นฉาย (ลดเหลือ 1 มิติ)" data-en="Projection line (down to 1D)">เส้นฉาย (ลดเหลือ 1 มิติ)</div>
+
+        <div class="slider-group">
+          <div class="slider-header">
+            <span class="slider-name" data-th="มุมของเส้น θ" data-en="Line angle θ">มุมของเส้น θ</span>
+            <span class="slider-val" style="color:#dc3545;" id="thVal">20°</span>
+          </div>
+          <input type="range" id="thSlider" min="0" max="180" step="1" value="20" oninput="onTheta()">
+          <div class="sub-hint" data-th="หรือคลิกแล้วลากบนกราฟเพื่อหมุนเส้น" data-en="Or click and drag on the plot to rotate the line.">หรือคลิกแล้วลากบนกราฟเพื่อหมุนเส้น</div>
+        </div>
+
+        <div class="slider-group">
+          <button class="act-btn primary" onclick="snapPC1()" data-th="หมุนไปที่ PC1" data-en="Rotate to PC1">หมุนไปที่ PC1</button>
+          <label class="check-row"><input type="checkbox" id="chkRes" checked onchange="onChecks()"><span data-th="แสดงระยะที่เสียไป (เส้นตั้งฉาก)" data-en="Show lost distance (perpendiculars)">แสดงระยะที่เสียไป (เส้นตั้งฉาก)</span></label>
+          <label class="check-row"><input type="checkbox" id="chkPC" onchange="onChecks()"><span data-th="แสดงแกน PC1 / PC2 จริง" data-en="Show the true PC1 / PC2 axes">แสดงแกน PC1 / PC2 จริง</span></label>
+          <label class="check-row"><input type="checkbox" id="chkReg" onchange="onChecks()"><span data-th="เทียบกับเส้นถดถอย (y บน x)" data-en="Compare with regression line (y on x)">เทียบกับเส้นถดถอย (y บน x)</span></label>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title" data-th="สเกลของตัวแปร" data-en="Variable scale">สเกลของตัวแปร</div>
+
+        <div class="slider-group">
+          <div class="field-label" data-th="หน่วยของส่วนสูง" data-en="Height unit">หน่วยของส่วนสูง</div>
+          <div class="seg" id="segUnit">
+            <button data-unit="cm" class="active" onclick="setUnit('cm')" data-th="เซนติเมตร" data-en="Centimetres">เซนติเมตร</button>
+            <button data-unit="m" onclick="setUnit('m')" data-th="เมตร" data-en="Metres">เมตร</button>
+          </div>
+          <div class="sub-hint" data-th="คนกลุ่มเดิม ข้อมูลเดิม แค่เปลี่ยนหน่วย" data-en="Same people, same data — only the unit changes.">คนกลุ่มเดิม ข้อมูลเดิม แค่เปลี่ยนหน่วย</div>
+        </div>
+
+        <div class="slider-group">
+          <div class="field-label" data-th="การปรับสเกล" data-en="Scaling">การปรับสเกล</div>
+          <div class="seg" id="segStd">
+            <button data-std="raw" class="active" onclick="setStd(false)" data-th="ข้อมูลดิบ" data-en="Raw">ข้อมูลดิบ</button>
+            <button data-std="std" onclick="setStd(true)">Standardize</button>
+          </div>
+          <div class="sub-hint" data-th="Standardize = หารด้วย SD ให้ทุกตัวแปรมี SD = 1 (PCA บน correlation matrix)" data-en="Standardize = divide by SD so every variable has SD = 1 (PCA on the correlation matrix).">Standardize = หารด้วย SD ให้ทุกตัวแปรมี SD = 1 (PCA บน correlation matrix)</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title" data-th="คำถามชวนคิด" data-en="Discussion Questions">คำถามชวนคิด</div>
+        <div class="questions">
+          <div class="q-chip" data-th="ถ้า r = 0 และ Standardize แล้ว PC1 เก็บความแปรปรวนได้กี่ % ทำไม?" data-en="With r = 0 and standardized data, how much variance does PC1 keep? Why?">ถ้า r = 0 และ Standardize แล้ว PC1 เก็บความแปรปรวนได้กี่ % ทำไม?</div>
+          <div class="q-chip" data-th="เปลี่ยนหน่วยส่วนสูงเป็นเมตร ทำไม PC1 เปลี่ยน ทั้งที่เป็นคนกลุ่มเดิม?" data-en="Switching height to metres changes PC1 — but it's the same people. Why?">เปลี่ยนหน่วยส่วนสูงเป็นเมตร ทำไม PC1 เปลี่ยน ทั้งที่เป็นคนกลุ่มเดิม?</div>
+          <div class="q-chip" data-th="เส้นถดถอยกับ PC1 ทับกันเมื่อไหร่ และทำไมปกติไม่ทับกัน?" data-en="When do the regression line and PC1 coincide, and why usually not?">เส้นถดถอยกับ PC1 ทับกันเมื่อไหร่ และทำไมปกติไม่ทับกัน?</div>
+          <div class="q-chip" data-th="ทำไม PC2 ต้องตั้งฉากกับ PC1 เสมอ?" data-en="Why is PC2 always perpendicular to PC1?">ทำไม PC2 ต้องตั้งฉากกับ PC1 เสมอ?</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT: PLOTS -->
+    <div>
+      <div class="card">
+        <div class="card-title" data-th="ข้อมูล 2 มิติ และเส้นฉาย" data-en="2D data and the projection line">ข้อมูล 2 มิติ และเส้นฉาย</div>
+
+        <canvas id="cvs" height="420"></canvas>
+
+        <div class="legend">
+          <div class="legend-item"><div class="legend-dot" style="background:#0d6efd;"></div><span data-th="ข้อมูล (1 จุด = 1 คน)" data-en="Data (1 dot = 1 person)">ข้อมูล (1 จุด = 1 คน)</span></div>
+          <div class="legend-item"><div class="legend-line" style="border-color:#1a1a1a;"></div><span data-th="เส้นฉาย" data-en="Projection line">เส้นฉาย</span></div>
+          <div class="legend-item"><div class="legend-dot" style="background:#20c997;"></div><span data-th="จุดหลังฉาย" data-en="Projected points">จุดหลังฉาย</span></div>
+          <div class="legend-item"><div class="legend-line" style="border-color:rgba(220,53,69,0.6); border-top-width:2px;"></div><span data-th="ระยะที่เสียไป" data-en="Lost distance">ระยะที่เสียไป</span></div>
+          <div class="legend-item"><div class="legend-dash" style="border-color:#6f42c1;"></div><span data-th="แกน PC จริง" data-en="True PC axes">แกน PC จริง</span></div>
+          <div class="legend-item"><div class="legend-dash" style="border-color:#fd7e14;"></div><span data-th="เส้นถดถอย" data-en="Regression line">เส้นถดถอย</span></div>
+        </div>
+
+        <div class="strip-label" data-th="ข้อมูลหลังลดเหลือ 1 มิติ (ตำแหน่งบนเส้นฉาย)" data-en="Data after reducing to 1D (position along the line)">ข้อมูลหลังลดเหลือ 1 มิติ (ตำแหน่งบนเส้นฉาย)</div>
+        <canvas id="strip" height="70"></canvas>
+
+        <div class="stat-grid">
+          <div class="stat" style="border-bottom: 4px solid #20c997;"><div class="stat-val" style="color:#0f7a5a;" id="capOut">–</div><div class="stat-lbl" data-th="ความแปรปรวนที่เก็บได้" data-en="Variance kept">ความแปรปรวนที่เก็บได้</div></div>
+          <div class="stat" style="border-bottom: 4px solid #dc3545;"><div class="stat-val" style="color:#dc3545;" id="lostOut">–</div><div class="stat-lbl" data-th="ความแปรปรวนที่เสียไป" data-en="Variance lost">ความแปรปรวนที่เสียไป</div></div>
+          <div class="stat" style="border-bottom: 4px solid #6f42c1;"><div class="stat-val" style="color:#6f42c1;" id="pcOut">–</div><div class="stat-lbl" data-th="มุมของ PC1" data-en="PC1 angle">มุมของ PC1</div></div>
+        </div>
+
+        <div class="formula" id="formula"></div>
+        <div class="decision" id="decision"></div>
+        <div class="insight" id="story"></div>
+        <div class="insight scale" id="scaleNote"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title" data-th="เก็บได้เท่าไหร่ในแต่ละมุม" data-en="Variance kept at every angle">เก็บได้เท่าไหร่ในแต่ละมุม</div>
+        <canvas id="curve" height="230"></canvas>
+        <div class="legend">
+          <div class="legend-item"><div class="legend-line" style="border-color:#20c997;"></div><span data-th="เก็บได้" data-en="Kept">เก็บได้</span></div>
+          <div class="legend-item"><div class="legend-line" style="border-color:#dc3545;"></div><span data-th="เสียไป" data-en="Lost">เสียไป</span></div>
+          <div class="legend-item"><div style="width:2px; height:14px; background:#1a1a1a;"></div><span data-th="มุมปัจจุบัน" data-en="Current angle">มุมปัจจุบัน</span></div>
+          <div class="legend-item"><div class="legend-dash" style="border-color:#6f42c1;"></div><span>PC1 / PC2</span></div>
+        </div>
+        <div class="insight mis" id="mis"></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+/* ---------- language ---------- */
+var currentLang = 'th';
+function t(th, en){ return currentLang === 'en' ? en : th; }
+function setLang(lang){
+  currentLang = lang;
+  document.documentElement.lang = lang;
+  document.querySelectorAll('.lang-btn').forEach(b => b.classList.toggle('active', b.textContent.trim().toLowerCase() === lang));
+  document.querySelectorAll('[data-th]').forEach(el => { var v = el.getAttribute('data-'+lang); if(v!==null) el.innerHTML = v; });
+  render();
+}
+
+/* ---------- random data (seeded, so sliders reshape the same people) ---------- */
+function mulberry32(a){ return function(){ a|=0; a=a+0x6D2B79F5|0; var q=Math.imul(a^a>>>15,1|a); q=q+Math.imul(q^q>>>7,61|q)^q; return ((q^q>>>14)>>>0)/4294967296; }; }
+let seed = 20260921, Z1 = [], Z2 = [];
+function genBase(){
+  const rnd = mulberry32(seed); Z1 = []; Z2 = [];
+  for(let i=0;i<300;i++){
+    const u1 = rnd() || 1e-9, u2 = rnd(), R = Math.sqrt(-2*Math.log(u1));
+    Z1.push(R*Math.cos(2*Math.PI*u2)); Z2.push(R*Math.sin(2*Math.PI*u2));
+  }
+}
+function newData(){ seed = Math.floor(Math.random()*1e9); genBase(); render(); }
+
+/* ---------- state ---------- */
+const S = { r:0.7, n:80, theta:20, unit:'cm', std:false, showRes:true, showPC:false, showReg:false };
+
+function onInput(){
+  S.r = parseFloat(document.getElementById('rSlider').value);
+  S.n = parseInt(document.getElementById('nSlider').value);
+  render();
+}
+function onTheta(){ stopAnim(); S.theta = parseFloat(document.getElementById('thSlider').value); render(); }
+function onChecks(){
+  S.showRes = document.getElementById('chkRes').checked;
+  S.showPC  = document.getElementById('chkPC').checked;
+  S.showReg = document.getElementById('chkReg').checked;
+  render();
+}
+function setUnit(u){ S.unit=u; document.querySelectorAll('#segUnit button').forEach(b=>b.classList.toggle('active', b.dataset.unit===u)); render(); }
+function setStd(v){ S.std=v; document.querySelectorAll('#segStd button').forEach(b=>b.classList.toggle('active', b.dataset.std===(v?'std':'raw'))); render(); }
+function setTheta(v){ S.theta = ((v%180)+180)%180; document.getElementById('thSlider').value = S.theta; render(); }
+
+/* ---------- compute ---------- */
+function compute(){
+  const n=S.n, r=S.r, q=Math.sqrt(1-r*r);
+  let xs=[], ys=[];
+  for(let i=0;i<n;i++){
+    const h = 165 + 8*Z1[i];                       // height, cm
+    const w = 60 + 10*(r*Z1[i] + q*Z2[i]);         // weight, kg
+    xs.push(S.unit==='cm' ? h : h/100); ys.push(w);
+  }
+  const mx = xs.reduce((a,b)=>a+b,0)/n, my = ys.reduce((a,b)=>a+b,0)/n;
+  xs = xs.map(v=>v-mx); ys = ys.map(v=>v-my);
+  let sxx=0, syy=0, sxy=0;
+  for(let i=0;i<n;i++){ sxx+=xs[i]*xs[i]; syy+=ys[i]*ys[i]; sxy+=xs[i]*ys[i]; }
+  sxx/=(n-1); syy/=(n-1); sxy/=(n-1);
+  const rs = sxy/Math.sqrt(sxx*syy);
+  const sdx = Math.sqrt(sxx), sdy = Math.sqrt(syy);
+  if(S.std){ xs=xs.map(v=>v/sdx); ys=ys.map(v=>v/sdy); sxy=rs; sxx=1; syy=1; }
+  const tot=sxx+syy, half=(sxx-syy)/2, disc=Math.sqrt(half*half+sxy*sxy);
+  const l1=tot/2+disc, l2=tot/2-disc;
+  let pc = 0.5*Math.atan2(2*sxy, sxx-syy)*180/Math.PI; pc = ((pc%180)+180)%180;
+  const cap = varAt(S.theta, sxx, syy, sxy);
+  let diff = Math.abs(S.theta-pc)%180; diff = Math.min(diff, 180-diff);
+  return { xs, ys, sxx, syy, sxy, rs, sdx, sdy, tot, l1, l2, pc, cap,
+           capPct: cap/tot*100, lostPct: 100-cap/tot*100, diff };
+}
+function varAt(deg, sxx, syy, sxy){ const a=deg*Math.PI/180, c=Math.cos(a), s=Math.sin(a); return sxx*c*c + 2*sxy*c*s + syy*s*s; }
+
+/* ---------- helpers ---------- */
+function niceStep(raw){ const p=Math.pow(10,Math.floor(Math.log10(raw))), f=raw/p; return (f<1.5?1:f<3?2:f<7?5:10)*p; }
+function fmtTick(v,step){ const d=Math.max(0,-Math.floor(Math.log10(step))); return (Math.abs(v)<step/1e6?0:v).toFixed(d); }
+function fmtNum(v){ const a=Math.abs(v); return a>=100?v.toFixed(0):a>=1?v.toFixed(2):v.toPrecision(3); }
+
+/* ---------- canvases ---------- */
+const cvs=document.getElementById('cvs'), cx=cvs.getContext('2d');
+const strip=document.getElementById('strip'), sx=strip.getContext('2d');
+const curve=document.getElementById('curve'), kx=curve.getContext('2d');
+function fit(c,g,H){
+  const dpr=window.devicePixelRatio||1, W=c.parentElement.clientWidth-40;
+  c.style.width=W+'px'; c.style.height=H+'px'; c.width=W*dpr; c.height=H*dpr;
+  g.setTransform(dpr,0,0,dpr,0,0);
+}
+function resizeAll(){
+  const W=cvs.parentElement.clientWidth-40;
+  fit(cvs,cx,Math.round(Math.min(440,Math.max(300,W*0.78))));
+  fit(strip,sx,70); fit(curve,kx,230);
+  render();
+}
+window.addEventListener('resize', resizeAll);
+
+const G = { ox:0, oy:0 };   // plot origin in px, for dragging
+
+function drawScatter(D){
+  const W=cvs.offsetWidth, H=cvs.offsetHeight; if(!W) return;
+  cx.clearRect(0,0,W,H);
+  const pad={top:14,bottom:40,left:58,right:14};
+  const cw=W-pad.left-pad.right, ch=H-pad.top-pad.bottom;
+  const ox=pad.left+cw/2, oy=pad.top+ch/2; G.ox=ox; G.oy=oy;
+  let mxAbs=1e-9, myAbs=1e-9;
+  D.xs.forEach(v=>{ if(Math.abs(v)>mxAbs) mxAbs=Math.abs(v); });
+  D.ys.forEach(v=>{ if(Math.abs(v)>myAbs) myAbs=Math.abs(v); });
+  const sc = Math.min(cw/(2*mxAbs*1.12), ch/(2*myAbs*1.12));   // equal aspect: 1 unit x = 1 unit y
+  const X=x=>ox+x*sc, Y=y=>oy-y*sc;
+  const xh=cw/2/sc, yh=ch/2/sc;
+
+  // grid
+  cx.font='13px "IBM Plex Sans",sans-serif';
+  const sxStep=niceStep(xh*2/6), syStep=niceStep(yh*2/6);
+  cx.strokeStyle='#f0f0f0'; cx.lineWidth=1; cx.fillStyle='#999';
+  cx.textAlign='center';
+  for(let v=Math.ceil(-xh/sxStep)*sxStep; v<=xh; v+=sxStep){ const px=X(v);
+    cx.beginPath(); cx.moveTo(px,pad.top); cx.lineTo(px,pad.top+ch); cx.stroke();
+    cx.fillText(fmtTick(v,sxStep),px,pad.top+ch+16); }
+  cx.textAlign='right';
+  for(let v=Math.ceil(-yh/syStep)*syStep; v<=yh; v+=syStep){ const py=Y(v);
+    cx.beginPath(); cx.moveTo(pad.left,py); cx.lineTo(pad.left+cw,py); cx.stroke();
+    cx.fillText(fmtTick(v,syStep),pad.left-6,py+4); }
+
+  // axis titles
+  const unitX = S.std ? 'z' : (S.unit==='cm'?'cm':'m');
+  const unitY = S.std ? 'z' : 'kg';
+  const devTxt = S.std ? '' : t(', วัดจากค่าเฉลี่ย',', from mean');
+  cx.fillStyle='#555'; cx.font='600 13px "Noto Sans Thai","IBM Plex Sans",sans-serif';
+  cx.textAlign='center';
+  cx.fillText(t('ส่วนสูง','Height')+' ('+unitX+devTxt+')', ox, H-6);
+  cx.save(); cx.translate(13, oy); cx.rotate(-Math.PI/2);
+  cx.fillText(t('น้ำหนัก','Weight')+' ('+unitY+devTxt+')', 0, 0); cx.restore();
+
+  cx.save(); cx.beginPath(); cx.rect(pad.left,pad.top,cw,ch); cx.clip();
+  // zero axes
+  cx.strokeStyle='#cfcfcf'; cx.lineWidth=1;
+  cx.beginPath(); cx.moveTo(pad.left,oy); cx.lineTo(pad.left+cw,oy); cx.moveTo(ox,pad.top); cx.lineTo(ox,pad.top+ch); cx.stroke();
+
+  const L=Math.hypot(xh,yh)*1.1;
+  const line=(ang,color,width,dash)=>{ const a=ang*Math.PI/180, ux=Math.cos(a), uy=Math.sin(a);
+    cx.setLineDash(dash||[]); cx.strokeStyle=color; cx.lineWidth=width;
+    cx.beginPath(); cx.moveTo(X(-L*ux),Y(-L*uy)); cx.lineTo(X(L*ux),Y(L*uy)); cx.stroke(); cx.setLineDash([]); };
+
+  if(S.showReg){ const b=D.sxy/D.sxx; line(Math.atan(b)*180/Math.PI,'#fd7e14',2,[7,5]); }
+  if(S.showPC){ line(D.pc,'#6f42c1',2,[6,4]); line(D.pc+90,'rgba(111,66,193,0.45)',1.5,[6,4]); }
+
+  const a=S.theta*Math.PI/180, ux=Math.cos(a), uy=Math.sin(a);
+  if(S.showRes){
+    cx.strokeStyle='rgba(220,53,69,0.5)'; cx.lineWidth=1.2; cx.beginPath();
+    for(let i=0;i<D.xs.length;i++){ const s=D.xs[i]*ux+D.ys[i]*uy;
+      cx.moveTo(X(D.xs[i]),Y(D.ys[i])); cx.lineTo(X(s*ux),Y(s*uy)); }
+    cx.stroke();
+  }
+  line(S.theta,'#1a1a1a',2.5);
+
+  cx.fillStyle='rgba(13,110,253,0.75)';
+  for(let i=0;i<D.xs.length;i++){ cx.beginPath(); cx.arc(X(D.xs[i]),Y(D.ys[i]),4,0,2*Math.PI); cx.fill(); }
+  cx.fillStyle='rgba(32,201,151,0.85)';
+  for(let i=0;i<D.xs.length;i++){ const s=D.xs[i]*ux+D.ys[i]*uy; cx.beginPath(); cx.arc(X(s*ux),Y(s*uy),2.8,0,2*Math.PI); cx.fill(); }
+  cx.restore();
+}
+
+function drawStrip(D){
+  const W=strip.offsetWidth, H=strip.offsetHeight; if(!W) return;
+  sx.clearRect(0,0,W,H);
+  const padL=16, padR=16, cw=W-padL-padR, yMid=H/2-6;
+  let R=1e-9; for(let i=0;i<D.xs.length;i++){ const d=Math.hypot(D.xs[i],D.ys[i]); if(d>R) R=d; } R*=1.05;
+  const X=s=>padL+(s+R)/(2*R)*cw;
+  sx.strokeStyle='#888'; sx.lineWidth=1; sx.beginPath(); sx.moveTo(padL,yMid); sx.lineTo(W-padR,yMid); sx.stroke();
+  sx.strokeStyle='#bbb'; sx.beginPath(); sx.moveTo(X(0),yMid-10); sx.lineTo(X(0),yMid+10); sx.stroke();
+  const a=S.theta*Math.PI/180, ux=Math.cos(a), uy=Math.sin(a);
+  sx.fillStyle='rgba(32,201,151,0.55)';
+  for(let i=0;i<D.xs.length;i++){ const s=D.xs[i]*ux+D.ys[i]*uy; sx.beginPath(); sx.arc(X(s),yMid,4,0,2*Math.PI); sx.fill(); }
+  // spread bar: ±1 SD of the projected scores
+  const sd=Math.sqrt(D.cap);
+  sx.strokeStyle='#0f7a5a'; sx.lineWidth=3; sx.beginPath(); sx.moveTo(X(-sd),yMid+16); sx.lineTo(X(sd),yMid+16); sx.stroke();
+  sx.fillStyle='#0f7a5a'; sx.font='600 12px "Noto Sans Thai","IBM Plex Sans",sans-serif'; sx.textAlign='center';
+  sx.fillText('±1 SD', X(0), yMid+30);
+}
+
+function drawCurve(D){
+  const W=curve.offsetWidth, H=curve.offsetHeight; if(!W) return;
+  kx.clearRect(0,0,W,H);
+  const pad={top:18,bottom:30,left:46,right:14};
+  const cw=W-pad.left-pad.right, ch=H-pad.top-pad.bottom;
+  const X=a=>pad.left+a/180*cw, Y=p=>pad.top+ch-(p/100)*ch;
+  kx.font='13px "IBM Plex Sans",sans-serif';
+  kx.strokeStyle='#f0f0f0'; kx.lineWidth=1; kx.fillStyle='#999';
+  kx.textAlign='right';
+  [0,25,50,75,100].forEach(p=>{ kx.beginPath(); kx.moveTo(pad.left,Y(p)); kx.lineTo(pad.left+cw,Y(p)); kx.stroke(); kx.fillText(p+'%',pad.left-6,Y(p)+4); });
+  kx.textAlign='center';
+  for(let a=0;a<=180;a+=30){ kx.beginPath(); kx.moveTo(X(a),pad.top); kx.lineTo(X(a),pad.top+ch); kx.stroke(); kx.fillText(a+'°',X(a),pad.top+ch+18); }
+
+  // PC markers
+  const pc2=(D.pc+90)%180;
+  kx.setLineDash([6,4]); kx.lineWidth=1.5;
+  kx.strokeStyle='#6f42c1'; kx.beginPath(); kx.moveTo(X(D.pc),pad.top); kx.lineTo(X(D.pc),pad.top+ch); kx.stroke();
+  kx.strokeStyle='rgba(111,66,193,0.45)'; kx.beginPath(); kx.moveTo(X(pc2),pad.top); kx.lineTo(X(pc2),pad.top+ch); kx.stroke();
+  kx.setLineDash([]);
+  kx.font='700 12px "IBM Plex Sans",sans-serif';
+  kx.fillStyle='#6f42c1'; kx.fillText('PC1',X(D.pc),pad.top-5);
+  kx.fillStyle='rgba(111,66,193,0.7)'; kx.fillText('PC2',X(pc2),pad.top-5);
+
+  const series=(fn,color)=>{ kx.strokeStyle=color; kx.lineWidth=2.5; kx.beginPath();
+    for(let a=0;a<=180;a+=1){ const p=fn(a); a?kx.lineTo(X(a),Y(p)):kx.moveTo(X(a),Y(p)); } kx.stroke(); };
+  const pctAt=a=>varAt(a,D.sxx,D.syy,D.sxy)/D.tot*100;
+  series(pctAt,'#20c997');
+  series(a=>100-pctAt(a),'#dc3545');
+
+  // current angle
+  kx.strokeStyle='#1a1a1a'; kx.lineWidth=2; kx.beginPath(); kx.moveTo(X(S.theta),pad.top); kx.lineTo(X(S.theta),pad.top+ch); kx.stroke();
+  [[D.capPct,'#20c997'],[D.lostPct,'#dc3545']].forEach(([p,c])=>{ kx.fillStyle='#fff'; kx.strokeStyle=c; kx.lineWidth=2.5;
+    kx.beginPath(); kx.arc(X(S.theta),Y(p),5.5,0,2*Math.PI); kx.fill(); kx.stroke(); });
+}
+
+/* ---------- drag to rotate ---------- */
+let dragging=false;
+function angleFromEvent(e){
+  const rect=cvs.getBoundingClientRect(), dx=(e.clientX-rect.left)-G.ox, dy=G.oy-(e.clientY-rect.top);
+  if(dx*dx+dy*dy<36) return null;
+  return Math.atan2(dy,dx)*180/Math.PI;
+}
+cvs.addEventListener('pointerdown',e=>{ stopAnim(); dragging=true; cvs.setPointerCapture(e.pointerId); const a=angleFromEvent(e); if(a!==null) setTheta(a); });
+cvs.addEventListener('pointermove',e=>{ if(!dragging) return; const a=angleFromEvent(e); if(a!==null) setTheta(a); });
+cvs.addEventListener('pointerup',()=>dragging=false);
+cvs.addEventListener('pointercancel',()=>dragging=false);
+
+/* ---------- animate to PC1 ---------- */
+let animId=null;
+function stopAnim(){ if(animId){ cancelAnimationFrame(animId); animId=null; } }
+function snapPC1(){
+  stopAnim();
+  const target=compute().pc, start=S.theta;
+  let d=target-start; if(d>90) d-=180; if(d<-90) d+=180;
+  const reduce=window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if(reduce){ setTheta(target); return; }
+  const t0=performance.now(), dur=700;
+  function step(now){ let k=Math.min(1,(now-t0)/dur); k=1-Math.pow(1-k,3);
+    setTheta(start+d*k); animId = k<1 ? requestAnimationFrame(step) : null; }
+  animId=requestAnimationFrame(step);
+}
+
+/* ---------- text ---------- */
+function render(){
+  const D=compute();
+  document.getElementById('rVal').textContent=S.r.toFixed(2);
+  document.getElementById('nVal').textContent=S.n;
+  document.getElementById('thVal').textContent=S.theta.toFixed(0)+'°';
+  document.getElementById('rHint').innerHTML=t('r ที่คำนวณจากตัวอย่างจริง = '+D.rs.toFixed(2),'Actual sample r = '+D.rs.toFixed(2));
+
+  document.getElementById('capOut').textContent=D.capPct.toFixed(1)+'%';
+  document.getElementById('lostOut').textContent=D.lostPct.toFixed(1)+'%';
+  document.getElementById('pcOut').textContent=D.pc.toFixed(1)+'°';
+
+  // PC1 as a weighted combination of the original variables
+  const a=Math.cos(D.pc*Math.PI/180), b=Math.sin(D.pc*Math.PI/180);
+  const hN = S.std ? t('z<sub>ส่วนสูง</sub>','z<sub>height</sub>') : t('ส่วนสูง','height');
+  const wN = S.std ? t('z<sub>น้ำหนัก</sub>','z<sub>weight</sub>') : t('น้ำหนัก','weight');
+  document.getElementById('formula').innerHTML =
+    'PC1 = '+a.toFixed(3)+'·'+hN+' '+(b<0?'−':'+')+' '+Math.abs(b).toFixed(3)+'·'+wN+
+    '<br><span class="muted">λ₁ = '+fmtNum(D.l1)+' &nbsp; λ₂ = '+fmtNum(D.l2)+' &nbsp; '+
+    t('ความแปรปรวนรวม','total variance')+' = '+fmtNum(D.tot)+'</span>';
+
+  // decision banner
+  const dec=document.getElementById('decision');
+  if(D.diff<1.5){ dec.className='decision hit'; dec.textContent=t('✓ เส้นนี้คือ PC1 — ทิศที่เก็บความแปรปรวนได้มากที่สุด','✓ This is PC1 — the direction that keeps the most variance'); }
+  else if(Math.abs(D.diff-90)<1.5){ dec.className='decision pc2'; dec.textContent=t('เส้นนี้คือ PC2 — ตั้งฉากกับ PC1 และเก็บได้น้อยที่สุด','This is PC2 — perpendicular to PC1, keeps the least variance'); }
+  else { dec.className='decision far'; dec.textContent=t('ห่างจาก PC1 อีก '+D.diff.toFixed(0)+'° — หมุนต่อ หรือกด "หมุนไปที่ PC1"','Still '+D.diff.toFixed(0)+'° away from PC1 — keep rotating or press "Rotate to PC1"'); }
+
+  // story
+  const cap=D.capPct.toFixed(1), lost=D.lostPct.toFixed(1), best=(D.l1/D.tot*100).toFixed(1);
+  let st = t(
+    '<b>แนวคิด:</b> เราอยากสรุปคน 1 คนด้วย<b>ตัวเลขตัวเดียว</b>แทนสองตัว จึงฉายทุกจุดลงบนเส้นตรง เส้นนี้เก็บความแปรปรวนได้ <b>'+cap+'%</b> ส่วนที่เหลือ <b>'+lost+'%</b> หายไปกับระยะตั้งฉาก (เส้นแดง) สองค่านี้รวมกันได้ 100% เสมอ ดังนั้น "เก็บให้มากที่สุด" กับ "เสียให้น้อยที่สุด" คือโจทย์เดียวกัน',
+    '<b>Idea:</b> we want to summarise each person with <b>one number</b> instead of two, so we project every point onto a line. This line keeps <b>'+cap+'%</b> of the variance; the other <b>'+lost+'%</b> is lost in the perpendicular distances (red). The two always add to 100%, so "keep the most" and "lose the least" are the same problem.');
+  if(D.l1/D.tot < 0.62) st += t(
+    ' <b>แต่ข้อมูลชุดนี้เกือบกลม</b> ไม่มีทิศไหนเด่น แม้แต่ PC1 ก็เก็บได้แค่ '+best+'% — ลดมิติแล้วเสียข้อมูลมาก',
+    ' <b>But this cloud is nearly round:</b> no direction dominates, so even PC1 keeps only '+best+'% — reducing dimensions loses a lot.');
+  else if(D.diff<1.5) st += t(
+    ' ที่ PC1 เราลดจาก 2 มิติเหลือ 1 มิติ โดยเสียข้อมูลเพียง '+lost+'%',
+    ' At PC1 we go from 2D to 1D while losing only '+lost+'%.');
+  document.getElementById('story').innerHTML=st;
+
+  // scale note
+  let sn;
+  if(S.std) sn = t(
+    '<b>Standardize แล้ว:</b> ทุกตัวแปรมี SD = 1 หน่วยจึงไม่มีผลอีกต่อไป เลือกเซนติเมตรหรือเมตรก็ได้ผลเหมือนกันทุกประการ สำหรับ 2 ตัวแปร PC1 จะอยู่ที่ 45° (r บวก) หรือ 135° (r ลบ) เสมอ สิ่งที่เปลี่ยนตาม r คือ<b>ปริมาณ</b>ที่เก็บได้ = (1 + |r|) / 2 = '+best+'%',
+    '<b>Standardized:</b> every variable has SD = 1, so units no longer matter — centimetres or metres give identical results. With 2 variables, PC1 always sits at 45° (positive r) or 135° (negative r). What r changes is <b>how much</b> it keeps: (1 + |r|) / 2 = '+best+'%.');
+  else if(S.unit==='m') sn = t(
+    '<b>ระวังเรื่องหน่วย:</b> ส่วนสูงเป็นเมตร ตัวเลขจึงมี SD แค่ประมาณ '+D.sdx.toFixed(2)+' ขณะที่น้ำหนักมี SD ประมาณ '+D.sdy.toFixed(1)+' PC1 เลยชี้ไปทางแกนน้ำหนักเกือบทั้งหมด (≈ '+D.pc.toFixed(1)+'°) และดูเหมือนเก็บได้ถึง '+best+'% ตัวเลขสวยแต่หลอก เพราะมาจากหน่วย ไม่ใช่จากความสัมพันธ์จริง ลองกด <b>Standardize</b>',
+    '<b>Watch the units:</b> in metres, height has an SD of only about '+D.sdx.toFixed(2)+' while weight has about '+D.sdy.toFixed(1)+'. PC1 therefore points almost straight along weight (≈ '+D.pc.toFixed(1)+'°) and seems to keep '+best+'%. Impressive but misleading — it comes from the units, not the relationship. Try <b>Standardize</b>.');
+  else sn = t(
+    '<b>เรื่องหน่วย:</b> ตอนนี้ SD ของส่วนสูง (≈ '+D.sdx.toFixed(1)+' ซม.) กับน้ำหนัก (≈ '+D.sdy.toFixed(1)+' กก.) ใกล้กันโดยบังเอิญ PC1 จึงดูสมเหตุสมผล ลองเปลี่ยนหน่วยส่วนสูงเป็น<b>เมตร</b> แล้วดูว่า PC1 เกิดอะไรขึ้น',
+    '<b>About units:</b> right now height (SD ≈ '+D.sdx.toFixed(1)+' cm) and weight (SD ≈ '+D.sdy.toFixed(1)+' kg) happen to have similar spreads, so PC1 looks sensible. Switch height to <b>metres</b> and watch what happens to PC1.');
+  document.getElementById('scaleNote').innerHTML=sn;
+
+  document.getElementById('mis').innerHTML=t(
+    '<b>ระวังเข้าใจผิด:</b> PCA ไม่ใช่การถดถอย (regression) — regression ลดระยะ<b>แนวตั้ง</b>เพื่อทำนาย y จาก x ส่วน PCA ลดระยะ<b>ตั้งฉาก</b>กับเส้น และมองทุกตัวแปรเท่ากันโดยไม่มีตัวแปรตาม ลองติ๊ก "เทียบกับเส้นถดถอย" แล้วดูว่าสองเส้นไม่ทับกัน',
+    '<b>Common misconception:</b> PCA is not regression. Regression minimises <b>vertical</b> distances to predict y from x; PCA minimises <b>perpendicular</b> distances and treats all variables equally, with no outcome variable. Tick "Compare with regression line" and see that the two lines differ.');
+
+  drawScatter(D); drawStrip(D); drawCurve(D);
+}
+
+/* init */
+genBase();
+setLang('th');
+setTimeout(resizeAll, 50);
+</script>
+</body>
+</html>
