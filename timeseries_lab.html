@@ -132,6 +132,8 @@ canvas { width: 100%; display: block; border-radius: 4px; background: #fff; }
           <div class="q-chip" data-th="สร้างเส้นที่มีฤดูกาลแรงๆ แล้วลองใช้ SES — ทำไมเส้นทำนายถึงแบน?" data-en="Build a strongly seasonal series, then use SES — why is the forecast flat?">สร้างเส้นที่มีฤดูกาลแรงๆ แล้วลองใช้ SES — ทำไมเส้นทำนายถึงแบน?</div>
           <div class="q-chip" data-th="RMSE ต่ำสุดที่โมเดลดีๆ ทำได้ ควรใกล้ค่าอะไร?" data-en="What value is the lowest achievable RMSE close to?">RMSE ต่ำสุดที่โมเดลดีๆ ทำได้ ควรใกล้ค่าอะไร?</div>
           <div class="q-chip" data-th="α มากหรือน้อย ทำให้โมเดล 'จำอดีต' นานแค่ไหน?" data-en="Does a larger or smaller α make the model remember the past longer?">α มากหรือน้อย ทำให้โมเดล 'จำอดีต' นานแค่ไหน?</div>
+          <div class="q-chip" data-th="ความชัน b จาก 'เฉลี่ยทีละครึ่ง' กับ 'กำลังสองน้อยสุด' ใกล้ความชันจริงที่ตั้งไว้แค่ไหน?" data-en="How close are the semi-average and least-squares slopes to the true slope you set?">ความชัน b จาก 'เฉลี่ยทีละครึ่ง' กับ 'กำลังสองน้อยสุด' ใกล้ความชันจริงที่ตั้งไว้แค่ไหน?</div>
+          <div class="q-chip" data-th="ตั้งคาบฤดูกาล m = 10 (ไม่หาร 24 ลงตัว) วิธีเฉลี่ยทีละครึ่งให้ความชันเพี้ยนไหม? เพราะอะไร?" data-en="Set the season period m = 10 (doesn't divide 24). Does the semi-average slope get biased? Why?">ตั้งคาบฤดูกาล m = 10 (ไม่หาร 24 ลงตัว) วิธีเฉลี่ยทีละครึ่งให้ความชันเพี้ยนไหม? เพราะอะไร?</div>
         </div>
       </div>
     </div>
@@ -247,6 +249,72 @@ var MODELS = {
     formula:['ŷ<sub>t+h</sub> = y<sub>t</sub> + h · '+frac('y<sub>t</sub> − y<sub>1</sub>','t − 1')],
     shape:{th:'ลากเส้นตรงจากจุดแรกไปจุดสุดท้ายแล้วต่อออกไป จับแนวโน้มแบบหยาบๆ', en:'Draws a straight line from first to last point and extends it — a crude trend.'}
   },
+  semiavg: {
+    name:{th:'Semi-average (เฉลี่ยทีละครึ่ง)', en:'Semi-average'},
+    cap:{level:true, trend:true, season:false}, params:[],
+    fit:function(y){
+      var n=y.length, half=Math.floor(n/2), odd=(n%2===1);
+      var s2 = odd ? half+1 : half;                 // 0-indexed start of 2nd half (odd n drops the middle)
+      var A=y.slice(0,half), B=y.slice(s2);
+      var m1=mean(A), m2=mean(B), t1=(half-1)/2, t2=(s2+n-1)/2, b=(m2-m1)/(t2-t1);
+      var f=function(tt){ return m1+b*(tt-t1); };
+      var fit=[], fc=[];
+      for(var i=0;i<n;i++) fit.push(f(i));
+      for(var k=0;k<H;k++) fc.push(f(n+k));
+      return {fitted:fit, fc:fc,
+        info:{n:n, half:half, odd:odd, s2:s2, sA:m1*A.length, sB:m2*B.length, m1:m1, m2:m2, t1:t1, t2:t2, b:b, fc0:fc[0]},
+        marks:[{t:t1, v:m1, label:'Ȳ₁'}, {t:t2, v:m2, label:'Ȳ₂'}],
+        split:{end1:half-1, start2:s2, drop: odd ? half : null}};
+    },
+    formula:function(I){
+      var rows=[];
+      if (I.odd) rows.push(t('n = '+I.n+' เป็นเลขคี่ → ตัดค่ากลาง (t = '+I.half+') ทิ้ง','n = '+I.n+' is odd → drop the middle value (t = '+I.half+')'));
+      rows.push(t('ครึ่งแรก','1st half')+' (t = 0–'+(I.half-1)+'): Ȳ₁ = '+frac('Σy','n₁')+' = '+frac(fmt(I.sA), I.half)+' = <b>'+fmt(I.m1)+'</b> &nbsp;→ '+t('วางที่ t = ','at t = ')+fmt(I.t1));
+      rows.push(t('ครึ่งหลัง','2nd half')+' (t = '+I.s2+'–'+(I.n-1)+'): Ȳ₂ = '+frac(fmt(I.sB), I.n-I.s2)+' = <b>'+fmt(I.m2)+'</b> &nbsp;→ '+t('วางที่ t = ','at t = ')+fmt(I.t2));
+      rows.push('b = '+frac('Ȳ₂ − Ȳ₁','t₂ − t₁')+' = '+frac(fmt(I.m2)+' − '+fmt(I.m1), fmt(I.t2)+' − '+fmt(I.t1))+' = <b>'+fmt(I.b)+'</b> '+t('ต่อช่วงเวลา','per period'));
+      rows.push('ŷ<sub>t</sub> = Ȳ₁ + b(t − t₁) = '+fmt(I.m1)+(I.b<0?' − ':' + ')+fmt(Math.abs(I.b))+'(t − '+fmt(I.t1)+')');
+      rows.push(t('ตัวอย่าง: ','e.g. ')+'ŷ<sub>'+I.n+'</sub> = '+fmt(I.m1)+(I.b<0?' − ':' + ')+fmt(Math.abs(I.b))+'('+I.n+' − '+fmt(I.t1)+') = <b>'+fmt(I.fc0)+'</b>');
+      return rows;
+    },
+    shape:{th:'แบ่งข้อมูลอดีตเป็น 2 ครึ่ง หาค่าเฉลี่ยแต่ละครึ่ง แล้วลากเส้นตรงผ่าน 2 จุดนั้น — วิธีหาแนวโน้มที่ง่ายที่สุด ใช้แค่บวกกับหาร แต่ใช้ข้อมูลเพียง 2 ค่าเฉลี่ย จึงไวต่อค่าผิดปกติ',
+           en:'Split the history into two halves, average each, and draw a straight line through the two points — the simplest trend method (just add and divide), but it rests on only two averages, so outliers sway it.'}
+  },
+  ls: {
+    name:{th:'Least Squares (กำลังสองน้อยสุด)', en:'Least Squares trend'},
+    cap:{level:true, trend:true, season:false}, params:[],
+    fit:function(y){
+      var n=y.length, odd=(n%2===1), tbar=(n-1)/2, unit=odd?1:0.5;
+      var X=function(tt){ return (tt-tbar)/unit; };
+      var sy=0, sxy=0, sxx=0;
+      for(var i=0;i<n;i++){ var x=X(i); sy+=y[i]; sxy+=x*y[i]; sxx+=x*x; }
+      var a=sy/n, b=sxy/sxx;
+      var f=function(tt){ return a+b*X(tt); };
+      var fit=[], fc=[];
+      for(var j=0;j<n;j++) fit.push(f(j));
+      for(var k=0;k<H;k++) fc.push(f(n+k));
+      var c1=b/unit, c0=a-c1*tbar;
+      return {fitted:fit, fc:fc,
+        info:{n:n, odd:odd, tbar:tbar, a:a, b:b, sy:sy, sxy:sxy, sxx:sxx, c0:c0, c1:c1, xNext:X(n), fc0:fc[0], xFirst:X(0)},
+        marks:[{t:tbar, v:a, label:'X = 0'}]};
+    },
+    formula:function(I){
+      var sg=function(v){ return (v<0?' − ':' + ')+fmt(Math.abs(v)); };
+      var rows=[];
+      rows.push(I.odd
+        ? t('ให้ X = 0 ที่กึ่งกลาง (t = '+fmt(I.tbar)+') → X = …, −2, −1, 0, 1, 2, … ⇒ ΣX = 0',
+            'Set X = 0 at the middle (t = '+fmt(I.tbar)+') → X = …, −2, −1, 0, 1, 2, … ⇒ ΣX = 0')
+        : t('n = '+I.n+' เป็นเลขคู่ กึ่งกลางอยู่ที่ t = '+fmt(I.tbar)+' → X = −'+Math.abs(I.xFirst)+', …, −3, −1, 1, 3, …, '+Math.abs(I.xFirst)+' (1 หน่วย X = ครึ่งช่วง) ⇒ ΣX = 0',
+            'n = '+I.n+' is even, centre at t = '+fmt(I.tbar)+' → X = −'+Math.abs(I.xFirst)+', …, −3, −1, 1, 3, …, '+Math.abs(I.xFirst)+' (1 unit of X = half a period) ⇒ ΣX = 0'));
+      rows.push('a = '+frac('ΣY','n')+' = '+frac(fmt(I.sy), I.n)+' = <b>'+fmt(I.a)+'</b>');
+      rows.push('b = '+frac('ΣXY','ΣX²')+' = '+frac(fmt(I.sxy), fmt(I.sxx))+' = <b>'+fmt(I.b)+'</b>');
+      rows.push('ŷ = a + bX = '+fmt(I.a)+sg(I.b)+'X &nbsp;⇔&nbsp; ŷ<sub>t</sub> = '+fmt(I.c0)+sg(I.c1)+'t'
+                + (I.odd ? '' : ' &nbsp;'+t('(ความชันต่อช่วง = 2b = ','(slope per period = 2b = ')+fmt(I.c1)+')'));
+      rows.push(t('ตัวอย่าง: t = ','e.g. t = ')+I.n+' → X = '+I.xNext+' → ŷ = '+fmt(I.a)+sg(I.b)+'('+I.xNext+') = <b>'+fmt(I.fc0)+'</b>');
+      return rows;
+    },
+    shape:{th:'หาเส้นตรง ŷ = a + bX ที่ทำให้ Σ(y − ŷ)² น้อยที่สุด ใช้ข้อมูลทุกจุดจึงเสถียรกว่าวิธีเฉลี่ยทีละครึ่ง และเส้นผ่านจุด (กึ่งกลางเวลา, ȳ) เสมอ แต่พยากรณ์ยังเป็นเส้นตรง ไม่มีคลื่นฤดูกาล',
+           en:'Finds the line ŷ = a + bX that minimises Σ(y − ŷ)². Using every point makes it steadier than the semi-average, and it always passes through (middle time, ȳ) — but the forecast is still a straight line with no seasonal wave.'}
+  },
   ma: {
     name:{th:'Moving Average (เกลี่ยเรียบ)', en:'Moving Average'},
     cap:{level:true, trend:false, season:false},
@@ -315,7 +383,8 @@ var MODELS = {
     shape:{th:'จับครบ ระดับ+แนวโน้ม+ฤดูกาล พยากรณ์จึงเอียงตามเทรนด์ "และ" ซ้ำคลื่นฤดูกาลได้ (ต้องรู้คาบ m)', en:'Captures level+trend+season, so the forecast slopes with the trend AND repeats the seasonal wave (needs the period m).'}
   }
 };
-var MODEL_ORDER = ['naive','mean','drift','ma','ses','holt','holtwinters'];
+var MODEL_ORDER = ['naive','mean','drift','semiavg','ls','ma','ses','holt','holtwinters'];
+var lastRes = null;
 
 /* ============ UI builders ============ */
 function buildModelSelect(){
@@ -376,6 +445,7 @@ function render(){
   var hist=Yfull.slice(0,n);
   var truth=Yfull.slice(n, L);
   var res=MODELS[currentModel].fit(hist);
+  lastRes=res;
   var fitted=res.fitted, fc=res.fc;
 
   // metrics on holdout
@@ -383,7 +453,7 @@ function render(){
   for(var i=0;i<H;i++){ var e=truth[i]-fc[i]; se+=e*e; ae+=Math.abs(e); }
   var rmse=Math.sqrt(se/H), mae=ae/H;
 
-  drawChart(hist, fitted, fc, truth);
+  drawChart(hist, fitted, fc, truth, res);
 
   document.getElementById('sMae').textContent=fmt(mae);
   document.getElementById('sRmse').textContent=fmt(rmse);
@@ -395,7 +465,7 @@ function render(){
   renderInsight(rmse);
 }
 
-function drawChart(hist, fitted, fc, truth){
+function drawChart(hist, fitted, fc, truth, res){
   var n=hist.length, L=n+H;
   var W=canvas.offsetWidth, Hh=canvas.offsetHeight;
   ctx.clearRect(0,0,W,Hh);
@@ -425,6 +495,17 @@ function drawChart(hist, fitted, fc, truth){
   ctx.fillStyle='#7c3aed'; ctx.font='700 12px "IBM Plex Sans",sans-serif'; ctx.textAlign='left';
   ctx.fillText(t('อนาคต','forecast'), xd+5, pad.top+13);
 
+  // semi-average: shade the two halves (and the dropped middle point when n is odd)
+  if (res && res.split){
+    var sp=res.split, gap=X(1)-X(0);
+    ctx.fillStyle='rgba(13,110,253,0.05)'; ctx.fillRect(X(0)-gap/2, pad.top, X(sp.end1)+gap/2-(X(0)-gap/2), ch);
+    ctx.fillStyle='rgba(253,126,20,0.07)'; ctx.fillRect(X(sp.start2)-gap/2, pad.top, xd-(X(sp.start2)-gap/2), ch);
+    if (sp.drop!==null){ ctx.fillStyle='rgba(0,0,0,0.10)'; ctx.fillRect(X(sp.drop)-gap/2, pad.top, gap, ch); }
+    ctx.font='700 12px "Noto Sans Thai","IBM Plex Sans",sans-serif'; ctx.textAlign='center'; ctx.fillStyle='#6c757d';
+    ctx.fillText(t('ครึ่งแรก','1st half'), (X(0)+X(sp.end1))/2, pad.top+13);
+    ctx.fillText(t('ครึ่งหลัง','2nd half'), (X(sp.start2)+xd)/2, pad.top+13);
+  }
+
   // x ticks
   ctx.fillStyle='#999'; ctx.font='12px "IBM Plex Sans",sans-serif'; ctx.textAlign='center';
   for(var tx=0;tx<L;tx+=Math.ceil(L/8)){ ctx.fillText(tx, X(tx), pad.top+ch+16); }
@@ -453,6 +534,20 @@ function drawChart(hist, fitted, fc, truth){
   ctx.stroke();
   ctx.fillStyle='#1a1a1a';
   for(var d=0;d<n;d++){ ctx.beginPath(); ctx.arc(X(d), Y(hist[d]), 2.2, 0, 2*Math.PI); ctx.fill(); }
+
+  // key points of the simple trend methods (Ȳ₁, Ȳ₂ / centre point)
+  if (res && res.marks){
+    res.marks.forEach(function(mk){
+      var mx=X(mk.t), my=Y(mk.v);
+      ctx.fillStyle='#fd7e14'; ctx.strokeStyle='#fff'; ctx.lineWidth=2.5;
+      ctx.beginPath(); ctx.arc(mx, my, 7, 0, 2*Math.PI); ctx.fill(); ctx.stroke();
+      var lbl=mk.label+' = '+fmt(mk.v);
+      ctx.font='700 13px "IBM Plex Sans",sans-serif'; ctx.textAlign='center';
+      var tw=ctx.measureText(lbl).width+10, ly=Math.min(my+24, pad.top+ch-6);
+      ctx.fillStyle='rgba(255,255,255,0.9)'; ctx.fillRect(mx-tw/2, ly-13, tw, 18);
+      ctx.fillStyle='#b35900'; ctx.fillText(lbl, mx, ly);
+    });
+  }
 }
 
 function renderCaptures(){
@@ -464,8 +559,10 @@ function renderCaptures(){
 
 function renderFormula(){
   var box=document.getElementById('formulaBox');
-  var lines=MODELS[currentModel].formula;
-  var html='<div class="fhead">'+t('สมการของโมเดล','Model equations')+'</div>';
+  var fm=MODELS[currentModel].formula;
+  var dyn=(typeof fm==='function');
+  var lines=dyn ? fm(lastRes.info) : fm;
+  var html='<div class="fhead">'+(dyn ? t('วิธีคำนวณทีละขั้น (จากข้อมูลบนกราฟ)','Step-by-step (using the data on the chart)') : t('สมการของโมเดล','Model equations'))+'</div>';
   lines.forEach(function(ln){ html+='<div class="formula-row">'+ln+'</div>'; });
   box.innerHTML=html;
 }
@@ -486,6 +583,11 @@ function renderInsight(rmse){
   } else if (cap.level && cap.trend && cap.season){
     extra=t(' · จับครบทุกองค์ประกอบ RMSE จึงลงมาใกล้ σ ≈ '+SIG.noise.toFixed(1)+' ซึ่งเป็นขีดจำกัดล่าง (ทำได้ดีกว่านี้ไม่ได้ เพราะ noise สุ่มล้วนๆ)',
              ' · It captures every component, so RMSE drops close to σ ≈ '+SIG.noise.toFixed(1)+', the lower bound (you cannot beat pure random noise).');
+  }
+  if ((currentModel==='semiavg' || currentModel==='ls') && lastRes){
+    var est = currentModel==='semiavg' ? lastRes.info.b : lastRes.info.c1;
+    extra += t(' · ความชันที่ประมาณได้ = <b>'+fmt(est)+'</b> ต่อช่วง เทียบกับความชันจริงที่ตั้งไว้ = <b>'+SIG.slope.toFixed(2)+'</b>',
+               ' · Estimated slope = <b>'+fmt(est)+'</b> per period vs the true slope you set = <b>'+SIG.slope.toFixed(2)+'</b>');
   }
   el.className='insight'+(warn?' warn':'');
   el.innerHTML='<b>'+MODELS[currentModel].name[currentLang]+':</b> '+base+extra;
